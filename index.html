@@ -1,0 +1,1456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PackSense AI - Intelligent Food Packaging Recommendation System</title>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- Leaflet CSS & JS (For Real Maps) -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+* { font-family: 'Inter', sans-serif; }
+body {
+background: linear-gradient(180deg, #f0fdf4 0%, #ecfdf5 50%, #f0fdf4 100%);
+color: #1e293b;
+overflow-x: hidden;
+}
+.gradient-text {
+background: linear-gradient(135deg, #15803d, #22c55e, #84cc16);
+-webkit-background-clip: text;
+-webkit-text-fill-color: transparent;
+background-clip: text;
+}
+.hero-bg {
+background:
+radial-gradient(ellipse at 20% 50%, rgba(34, 197, 94, 0.15) 0%, transparent 50%),
+radial-gradient(ellipse at 80% 20%, rgba(132, 204, 22, 0.12) 0%, transparent 50%),
+linear-gradient(180deg, #f0fdf4 0%, #dcfce7 100%);
+}
+.glass {
+background: rgba(255, 255, 255, 0.7);
+backdrop-filter: blur(20px);
+border: 1px solid rgba(34, 197, 94, 0.15);
+box-shadow: 0 8px 32px rgba(34, 197, 94, 0.08);
+}
+.card-hover { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+.card-hover:hover { transform: translateY(-6px); box-shadow: 0 20px 60px rgba(34, 197, 94, 0.15); }
+@keyframes pulse-soft { 0%, 100% { opacity: 0.6; transform: scale(1); } 50% { opacity: 1; transform: scale(1.05); } }
+@keyframes slide-up { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes scan-line { 0% { top: 0%; } 100% { top: 100%; } }
+@keyframes chat-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); } 50% { box-shadow: 0 0 0 15px rgba(34, 197, 94, 0); } }
+@keyframes bounce-food { 0%, 100% { transform: translateY(0) rotate(0deg); } 25% { transform: translateY(-8px) rotate(-5deg); } 75% { transform: translateY(-4px) rotate(5deg); } }
+@keyframes modal-in { from { opacity: 0; transform: scale(0.9) translateY(20px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+@keyframes check-pop { 0% { transform: scale(0); } 60% { transform: scale(1.2); } 100% { transform: scale(1); } }
+@keyframes confetti-fall { 0% { transform: translateY(-100%) rotate(0deg); opacity: 1; } 100% { transform: translateY(100vh) rotate(720deg); opacity: 0; } }
+.animate-pulse-soft { animation: pulse-soft 3s ease-in-out infinite; }
+.animate-bounce-food { animation: bounce-food 3s ease-in-out infinite; }
+/* Map Specific Styles */
+#map-container { height: 600px; width: 100%; border-radius: 16px; z-index: 1; position: relative; }
+.leaflet-control-zoom { border: none !important; box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important; border-radius: 8px !important; }
+.leaflet-bar a { background-color: white !important; color: #1e293b !important; border-bottom: 1px solid #e5e7eb !important; }
+.map-overlay-panel {
+position: absolute;
+z-index: 1000;
+background: rgba(15, 23, 42, 0.95);
+backdrop-filter: blur(12px);
+border: 1px solid rgba(255,255,255,0.1);
+color: white;
+border-radius: 12px;
+padding: 16px;
+box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+.telemetry-panel { top: 20px; left: 20px; width: 320px; }
+.vehicle-control-panel { bottom: 20px; left: 50%; transform: translateX(-50%); width: auto; min-width: 600px; display: flex; align-items: center; gap: 16px; }
+.live-badge { background: #ef4444; color: white; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 12px; letter-spacing: 0.5px; animation: pulse-soft 2s infinite; }
+.risk-high { color: #fbbf24; font-weight: 700; }
+.risk-critical { color: #ef4444; font-weight: 700; }
+.vehicle-btn {
+background: rgba(255,255,255,0.1);
+border: 1px solid rgba(255,255,255,0.2);
+color: white;
+padding: 8px 16px;
+border-radius: 8px;
+font-size: 13px;
+font-weight: 600;
+cursor: pointer;
+transition: all 0.2s;
+display: flex;
+align-items: center;
+gap: 8px;
+}
+.vehicle-btn:hover { background: rgba(255,255,255,0.2); }
+.vehicle-btn.active { background: #22c55e; border-color: #22c55e; color: white; }
+.control-btn {
+background: rgba(255,255,255,0.1);
+border: 1px solid rgba(255,255,255,0.2);
+color: white;
+padding: 8px 12px;
+border-radius: 8px;
+cursor: pointer;
+transition: all 0.2s;
+}
+.control-btn:hover { background: rgba(255,255,255,0.2); }
+/* Existing Styles */
+.mode-toggle { position: relative; width: 280px; height: 48px; background: rgba(255, 255, 255, 0.8); border-radius: 24px; border: 1px solid rgba(34, 197, 94, 0.2); cursor: pointer; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.1); }
+.mode-toggle .slider { position: absolute; top: 3px; left: 3px; width: calc(50% - 3px); height: 42px; background: linear-gradient(135deg, #22c55e, #16a34a); border-radius: 21px; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3); }
+.mode-toggle.industry .slider { left: calc(50%); background: linear-gradient(135deg, #0d9488, #0f766e); }
+.progress-bar { height: 8px; background: rgba(34, 197, 94, 0.1); border-radius: 4px; overflow: hidden; }
+.progress-bar .fill { height: 100%; border-radius: 4px; transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1); }
+.nav-link { position: relative; transition: color 0.3s; }
+.nav-link::after { content: ''; position: absolute; bottom: -4px; left: 0; width: 0; height: 2px; background: #22c55e; transition: width 0.3s; }
+.nav-link:hover::after, .nav-link.active::after { width: 100%; }
+.upload-zone { border: 2px dashed rgba(34, 197, 94, 0.3); transition: all 0.3s; background: rgba(240, 253, 244, 0.5); }
+.upload-zone:hover, .upload-zone.dragover { border-color: rgba(34, 197, 94, 0.8); background: rgba(220, 252, 231, 0.5); }
+.scan-overlay { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.scan-line { position: absolute; left: 0; width: 100%; height: 3px; background: linear-gradient(90deg, transparent, #22c55e, transparent); animation: scan-line 2s linear infinite; }
+.tab-btn { padding: 10px 20px; border-radius: 12px; transition: all 0.3s; cursor: pointer; font-weight: 600; font-size: 14px; }
+.tab-btn.active { background: linear-gradient(135deg, #22c55e, #16a34a); color: white; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3); }
+.tab-btn:not(.active) { color: #64748b; background: rgba(255,255,255,0.6); border: 1px solid rgba(34, 197, 94, 0.15); }
+.tab-btn:not(.active):hover { color: #15803d; background: rgba(220, 252, 231, 0.8); }
+select, input[type="text"], input[type="email"], input[type="password"], input[type="range"] { background: rgba(255, 255, 255, 0.9); border: 1px solid rgba(34, 197, 94, 0.2); color: #1e293b; border-radius: 10px; padding: 10px 14px; outline: none; transition: all 0.3s; width: 100%; }
+select:focus, input:focus { border-color: #22c55e; box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1); }
+.section-reveal { opacity: 0; transform: translateY(40px); transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
+.section-reveal.visible { opacity: 1; transform: translateY(0); }
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: #f0fdf4; }
+::-webkit-scrollbar-thumb { background: #86efac; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #22c55e; }
+.btn-primary { background: linear-gradient(135deg, #22c55e, #16a34a); color: white; padding: 12px 28px; border-radius: 12px; font-weight: 600; transition: all 0.3s; border: none; cursor: pointer; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3); }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(34, 197, 94, 0.4); }
+.btn-secondary { background: rgba(255,255,255,0.8); color: #15803d; padding: 12px 28px; border-radius: 12px; font-weight: 600; transition: all 0.3s; border: 1px solid rgba(34, 197, 94, 0.3); cursor: pointer; }
+.btn-secondary:hover { background: white; border-color: #22c55e; }
+.stat-number { font-size: 2.5rem; font-weight: 800; line-height: 1; }
+.divider { height: 1px; background: linear-gradient(90deg, transparent, rgba(34, 197, 94, 0.2), transparent); }
+.badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+.language-selector { position: relative; }
+.language-dropdown { position: absolute; top: 100%; right: 0; margin-top: 8px; background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(20px); border: 1px solid rgba(34, 197, 94, 0.2); border-radius: 16px; padding: 8px; min-width: 320px; max-height: 450px; overflow-y: auto; display: none; z-index: 100; box-shadow: 0 20px 60px rgba(34, 197, 94, 0.15); }
+.language-dropdown.show { display: block; animation: slide-up 0.2s ease-out; }
+.language-option { padding: 10px 14px; border-radius: 10px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: space-between; }
+.language-option:hover { background: rgba(220, 252, 231, 0.8); }
+.language-option.active { background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(132, 204, 22, 0.1)); border: 1px solid rgba(34, 197, 94, 0.3); }
+.language-option .lang-name { font-weight: 600; font-size: 14px; color: #1e293b; }
+.language-option .lang-native { font-size: 14px; color: #64748b; }
+.chatbot-btn { position: fixed; bottom: 30px; right: 30px; width: 72px; height: 72px; border-radius: 50%; background: linear-gradient(135deg, #22c55e, #16a34a); color: white; border: none; cursor: pointer; box-shadow: 0 10px 30px rgba(34, 197, 94, 0.4); z-index: 999; display: flex; align-items: center; justify-content: center; animation: chat-pulse 2s infinite; transition: transform 0.3s; overflow: hidden; }
+.chatbot-btn:hover { transform: scale(1.1); }
+.chatbot-btn .food-face { font-size: 40px; position: relative; line-height: 1; }
+.chatbot-window { position: fixed; bottom: 120px; right: 30px; width: 380px; max-width: calc(100vw - 40px); height: 560px; max-height: calc(100vh - 150px); background: white; border-radius: 24px; box-shadow: 0 25px 80px rgba(34, 197, 94, 0.25); z-index: 998; display: none; flex-direction: column; overflow: hidden; border: 1px solid rgba(34, 197, 94, 0.2); }
+.chatbot-window.open { display: flex; animation: slide-up 0.3s ease-out; }
+.chatbot-header { background: linear-gradient(135deg, #15803d, #16a34a); color: white; padding: 16px 20px; display: flex; align-items: center; gap: 12px; }
+.chatbot-avatar { width: 48px; height: 48px; border-radius: 50%; background: linear-gradient(135deg, #fef3c7, #fde68a); display: flex; align-items: center; justify-content: center; font-size: 28px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border: 2px solid rgba(255,255,255,0.3); position: relative; }
+.chatbot-avatar::after { content: ''; position: absolute; bottom: 2px; right: 2px; width: 12px; height: 12px; background: #22c55e; border-radius: 50%; border: 2px solid white; }
+.chatbot-messages { flex: 1; overflow-y: auto; padding: 20px; background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%); }
+.chat-message { margin-bottom: 16px; display: flex; gap: 10px; animation: slide-up 0.3s ease-out; }
+.chat-message.user { flex-direction: row-reverse; }
+.chat-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 20px; }
+.chat-avatar.bot { background: linear-gradient(135deg, #fef3c7, #fde68a); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+.chat-avatar.user { background: linear-gradient(135deg, #22c55e, #16a34a); color: white; font-size: 16px; }
+.chat-bubble { max-width: 75%; padding: 12px 16px; border-radius: 18px; font-size: 14px; line-height: 1.5; }
+.chat-message.bot .chat-bubble { background: white; color: #1e293b; border: 1px solid rgba(34, 197, 94, 0.15); border-bottom-left-radius: 4px; }
+.chat-message.user .chat-bubble { background: linear-gradient(135deg, #22c55e, #16a34a); color: white; border-bottom-right-radius: 4px; }
+.chatbot-input { padding: 16px; background: white; border-top: 1px solid rgba(34, 197, 94, 0.15); display: flex; gap: 8px; }
+.chatbot-input input { flex: 1; background: #f0fdf4; border: 1px solid rgba(34, 197, 94, 0.2); border-radius: 24px; padding: 10px 16px; font-size: 14px; color: #1e293b; }
+.chatbot-input button { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #22c55e, #16a34a); color: white; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.quick-replies { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 20px 12px; background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%); }
+.quick-reply { padding: 6px 12px; background: white; border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 16px; font-size: 12px; color: #15803d; cursor: pointer; transition: all 0.2s; }
+.quick-reply:hover { background: #dcfce7; border-color: #22c55e; }
+.chat-lang-selector { padding: 12px 20px; background: #f0fdf4; border-bottom: 1px solid rgba(34, 197, 94, 0.15); display: flex; align-items: center; gap: 8px; overflow-x: auto; }
+.chat-lang-chip { padding: 4px 10px; background: white; border: 1px solid rgba(34, 197, 94, 0.2); border-radius: 12px; font-size: 11px; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
+.chat-lang-chip.active { background: #22c55e; color: white; border-color: #22c55e; }
+.hero-illustration { position: relative; width: 100%; height: 400px; display: flex; align-items: center; justify-content: center; }
+.floating-food { position: absolute; font-size: 3rem; animation: pulse-soft 3s ease-in-out infinite; }
+.uploaded-image { max-width: 100%; max-height: 200px; border-radius: 8px; object-fit: contain; }
+.mode-content { display: none; }
+.mode-content.active { display: block; }
+.modal-overlay { position: fixed; inset: 0; background: rgba(20, 83, 45, 0.5); backdrop-filter: blur(8px); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 20px; }
+.modal-overlay.open { display: flex; animation: fadeIn 0.3s ease-out; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+.modal-content { background: white; border-radius: 24px; max-width: 480px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 25px 80px rgba(34, 197, 94, 0.3); animation: modal-in 0.4s cubic-bezier(0.34, 1.56, 0.64, 1); border: 1px solid rgba(34, 197, 94, 0.2); }
+.modal-header { background: linear-gradient(135deg, #15803d, #16a34a); color: white; padding: 24px; border-radius: 24px 24px 0 0; position: relative; overflow: hidden; }
+.modal-header::before { content: ''; position: absolute; top: -50%; right: -20%; width: 200px; height: 200px; background: radial-gradient(circle, rgba(255,255,255,0.15) 0%, transparent 70%); border-radius: 50%; }
+.modal-close { position: absolute; top: 16px; right: 16px; width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.2); border: none; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+.modal-close:hover { background: rgba(255,255,255,0.3); transform: rotate(90deg); }
+.modal-body { padding: 28px; }
+.user-type-toggle { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+.user-type-option { padding: 16px; border: 2px solid #e5e7eb; border-radius: 12px; cursor: pointer; transition: all 0.3s; text-align: center; background: white; }
+.user-type-option:hover { border-color: #86efac; }
+.user-type-option.active { border-color: #22c55e; background: linear-gradient(135deg, #f0fdf4, #dcfce7); box-shadow: 0 4px 12px rgba(34, 197, 94, 0.15); }
+.user-type-option .icon { font-size: 28px; margin-bottom: 6px; }
+.user-type-option .label { font-weight: 600; font-size: 13px; color: #1e293b; }
+.user-type-option .sublabel { font-size: 11px; color: #64748b; margin-top: 2px; }
+.form-group { margin-bottom: 16px; }
+.form-label { display: block; font-size: 13px; font-weight: 600; color: #1e293b; margin-bottom: 6px; }
+.form-input { background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; font-size: 14px; color: #1e293b; transition: all 0.3s; width: 100%; }
+.form-input:focus { outline: none; border-color: #22c55e; background: white; box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1); }
+.form-input.error { border-color: #ef4444; background: #fef2f2; }
+.form-error { color: #ef4444; font-size: 12px; margin-top: 4px; display: none; }
+.form-error.show { display: block; }
+.password-wrapper { position: relative; }
+.password-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; cursor: pointer; color: #64748b; padding: 4px; }
+.password-strength { display: flex; gap: 4px; margin-top: 8px; }
+.strength-bar { flex: 1; height: 4px; background: #e5e7eb; border-radius: 2px; transition: all 0.3s; }
+.strength-bar.weak { background: #ef4444; }
+.strength-bar.medium { background: #f59e0b; }
+.strength-bar.strong { background: #22c55e; }
+.success-state { text-align: center; padding: 20px; }
+.success-icon { width: 100px; height: 100px; margin: 0 auto 20px; background: linear-gradient(135deg, #dcfce7, #bbf7d0); border-radius: 50%; display: flex; align-items: center; justify-content: center; animation: check-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1); position: relative; }
+.success-icon::after { content: ''; position: absolute; inset: -10px; border: 3px solid #86efac; border-radius: 50%; animation: pulse-soft 2s ease-in-out infinite; }
+.success-email-card { background: linear-gradient(135deg, #f0fdf4, #dcfce7); border: 1px solid #86efac; border-radius: 16px; padding: 20px; margin-top: 20px; text-align: left; }
+.email-header { display: flex; align-items: center; gap: 10px; padding-bottom: 12px; border-bottom: 1px dashed #86efac; margin-bottom: 12px; }
+.confetti { position: absolute; width: 8px; height: 8px; border-radius: 2px; animation: confetti-fall 3s linear forwards; }
+</style>
+</head>
+<body>
+<!-- Navigation -->
+<nav class="fixed top-0 left-0 right-0 z-50" style="background: rgba(240, 253, 244, 0.85); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(34, 197, 94, 0.1);">
+<div class="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-green-700 flex items-center justify-center shadow-lg">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+<path d="M12 2C8 2 6 5 6 8c0 2 1 3 2 4-1 1-2 2-2 4 0 3 2 6 6 6s6-3 6-6c0-2-1-3-2-4 1-1 2-2 2-4 0-3-2-6-6-6z"/>
+<path d="M12 2v20"/>
+</svg>
+</div>
+<span class="text-xl font-bold text-green-900">Pack<span class="text-green-600">Sense</span> AI</span>
+</div>
+<div class="hidden md:flex items-center gap-6">
+<a href="#problem" class="nav-link text-sm text-slate-700 hover:text-green-700">Problem</a>
+<a href="#solution" class="nav-link text-sm text-slate-700 hover:text-green-700">Solution</a>
+<a href="#recommend" class="nav-link text-sm text-slate-700 hover:text-green-700">Recommend</a>
+<a href="#audit" class="nav-link text-sm text-slate-700 hover:text-green-700">Pack Audit</a>
+<a href="#climate" class="nav-link text-sm text-slate-700 hover:text-green-700">Climate Route</a>
+<a href="#materials" class="nav-link text-sm text-slate-700 hover:text-green-700">Materials</a>
+</div>
+<div class="flex items-center gap-2">
+<div class="language-selector">
+<button id="langBtn" class="btn-secondary text-sm flex items-center gap-2 !py-2 !px-3">
+<span id="currentLangFlag">🇬🇧</span>
+<span id="currentLang" class="hidden sm:inline">English</span>
+<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+</button>
+<div id="langDropdown" class="language-dropdown"></div>
+</div>
+<button class="btn-secondary text-sm !py-2 !px-3 hidden sm:flex items-center gap-2" onclick="openRegisterModal()">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+<span>Register</span>
+</button>
+<button class="btn-primary text-sm hidden sm:block !py-2 !px-4" onclick="scrollToSection('recommend')">Get Started</button>
+</div>
+</div>
+</nav>
+<!-- Hero Section -->
+<section class="hero-bg min-h-screen flex items-center relative pt-20 overflow-hidden">
+<div class="max-w-7xl mx-auto px-6 py-20 grid lg:grid-cols-2 gap-16 items-center relative z-10">
+<div>
+<div class="badge bg-green-100 text-green-700 border border-green-200 mb-6">
+<span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+<span> Sustainable Food Packaging Intelligence</span>
+</div>
+<h1 class="text-5xl lg:text-6xl font-extrabold leading-tight mb-6 text-green-900">
+<span>Smart Packaging</span><br>
+<span class="gradient-text">For Fresh Food</span><br>
+<span>& Zero Waste</span>
+</h1>
+<p class="text-lg text-slate-600 leading-relaxed mb-8 max-w-lg">
+AI-powered recommendations that match your food with the perfect sustainable packaging — reducing waste, extending freshness, and protecting our planet.
+</p>
+<div class="flex flex-wrap gap-4 mb-12">
+<button class="btn-primary" onclick="scrollToSection('recommend')"> Get Recommendation</button>
+<button class="btn-secondary" onclick="scrollToSection('solution')">How It Works</button>
+</div>
+<div class="grid grid-cols-3 gap-6">
+<div class="glass rounded-2xl p-4 text-center">
+<div class="stat-number text-green-600" id="counter1">0</div>
+<div class="text-xs text-slate-600 mt-1">Food Items</div>
+</div>
+<div class="glass rounded-2xl p-4 text-center">
+<div class="stat-number text-lime-600" id="counter2">0</div>
+<div class="text-xs text-slate-600 mt-1">Eco Materials</div>
+</div>
+<div class="glass rounded-2xl p-4 text-center">
+<div class="stat-number text-emerald-600" id="counter3">0%</div>
+<div class="text-xs text-slate-600 mt-1">Waste Reduced</div>
+</div>
+</div>
+</div>
+<div class="relative hero-illustration">
+<div class="relative w-full h-full flex items-center justify-center">
+<div class="relative z-10">
+<div class="w-64 h-64 rounded-full bg-gradient-to-br from-green-100 to-lime-100 flex items-center justify-center shadow-2xl border-4 border-white animate-pulse-soft">
+<div class="text-center">
+<div class="text-7xl mb-2">📦</div>
+<div class="text-sm font-bold text-green-700">Smart Package</div>
+</div>
+</div>
+</div>
+<div class="floating-food" style="top: 5%; left: 15%; animation-delay: 0s;">🥭</div>
+<div class="floating-food" style="top: 10%; right: 10%; animation-delay: 0.5s;">🍌</div>
+<div class="floating-food" style="top: 40%; left: 0%; animation-delay: 1s;"></div>
+<div class="floating-food" style="top: 40%; right: 0%; animation-delay: 1.5s;">🍅</div>
+<div class="floating-food" style="bottom: 15%; left: 10%; animation-delay: 2s;">🧀</div>
+<div class="floating-food" style="bottom: 10%; right: 15%; animation-delay: 2.5s;">🌾</div>
+<svg class="absolute inset-0 w-full h-full" style="z-index: 5;">
+<circle cx="50%" cy="50%" r="45%" fill="none" stroke="rgba(34, 197, 94, 0.2)" stroke-width="1" stroke-dasharray="4,4">
+<animateTransform attributeName="transform" type="rotate" from="0 50% 50%" to="360 50% 50%" dur="30s" repeatCount="indefinite"/>
+</circle>
+<circle cx="50%" cy="50%" r="35%" fill="none" stroke="rgba(132, 204, 22, 0.2)" stroke-width="1" stroke-dasharray="4,4">
+<animateTransform attributeName="transform" type="rotate" from="360 50% 50%" to="0 50% 50%" dur="25s" repeatCount="indefinite"/>
+</circle>
+</svg>
+</div>
+</div>
+</div>
+</section>
+<!-- Problem Section -->
+<section id="problem" class="py-24 section-reveal">
+<div class="max-w-7xl mx-auto px-6">
+<div class="text-center mb-16">
+<div class="badge bg-red-100 text-red-700 border border-red-200 mb-4">⚠️ The Challenge</div>
+<h2 class="text-4xl font-bold mb-4 text-green-900">Why Food Spoils in <span class="text-red-500">Wrong Packaging</span></h2>
+<p class="text-slate-600 max-w-2xl mx-auto">Small-scale farmers and SMEs lack access to packaging science, resulting in massive food waste due to incorrect material selection.</p>
+</div>
+<div class="grid md:grid-cols-3 gap-6 mb-12">
+<div class="glass rounded-2xl p-6 card-hover">
+<div class="w-14 h-14 rounded-xl bg-green-100 flex items-center justify-center mb-4"><span class="text-3xl">🥬</span></div>
+<h3 class="text-lg font-bold mb-2 text-green-700">Fresh Produce</h3>
+<p class="text-sm text-slate-600 mb-4">Fruits & vegetables suffocate in airtight packaging due to blocked respiration</p>
+<div class="mt-3 progress-bar"><div class="fill bg-gradient-to-r from-green-500 to-green-400" style="width: 85%"></div></div>
+<div class="text-xs text-slate-500 mt-1">Spoilage Risk: 85%</div>
+</div>
+<div class="glass rounded-2xl p-6 card-hover">
+<div class="w-14 h-14 rounded-xl bg-amber-100 flex items-center justify-center mb-4"><span class="text-3xl">🍟</span></div>
+<h3 class="text-lg font-bold mb-2 text-amber-700">Fried & Fatty Foods</h3>
+<p class="text-sm text-slate-600 mb-4">Chips, namkeen turn rancid from oxygen exposure and lose crunch from moisture</p>
+<div class="mt-3 progress-bar"><div class="fill bg-gradient-to-r from-amber-500 to-amber-400" style="width: 72%"></div></div>
+<div class="text-xs text-slate-500 mt-1">Rancidity Risk: 72%</div>
+</div>
+<div class="glass rounded-2xl p-6 card-hover">
+<div class="w-14 h-14 rounded-xl bg-blue-100 flex items-center justify-center mb-4"><span class="text-3xl"></span></div>
+<h3 class="text-lg font-bold mb-2 text-blue-700">High-Moisture Foods</h3>
+<p class="text-sm text-slate-600 mb-4">Paneer, meat spoil from microbial growth without proper vacuum or MAP</p>
+<div class="mt-3 progress-bar"><div class="fill bg-gradient-to-r from-blue-500 to-blue-400" style="width: 93%"></div></div>
+<div class="text-xs text-slate-500 mt-1">Microbial Risk: 93%</div>
+</div>
+</div>
+<div class="glass rounded-2xl p-8 border-l-4 border-red-400">
+<div class="flex items-start gap-4">
+<div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0"><span class="text-2xl">⚠️</span></div>
+<div>
+<h3 class="text-lg font-bold text-red-700 mb-2">The Critical Gap</h3>
+<p class="text-slate-600">No accessible, affordable system exists to match food commodities with scientifically appropriate packaging specifications based on <span class="text-green-800 font-semibold">OTR</span>, <span class="text-green-800 font-semibold">WVTR</span>, <span class="text-green-800 font-semibold">film gauge</span>, and <span class="text-green-800 font-semibold">barrier properties</span>.</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Solution Section -->
+<section id="solution" class="py-24 section-reveal" style="background: linear-gradient(180deg, transparent, rgba(220, 252, 231, 0.5), transparent);">
+<div class="max-w-7xl mx-auto px-6">
+<div class="text-center mb-16">
+<div class="badge bg-green-100 text-green-700 border border-green-200 mb-4">✨ The Solution</div>
+<h2 class="text-4xl font-bold mb-4 text-green-900">PackSense AI: <span class="gradient-text">Dual-Mode Intelligence</span></h2>
+<p class="text-slate-600 max-w-2xl mx-auto">Zero-barrier access for farmers & SMEs, laboratory-grade precision for industry users, with dynamic climate-route adaptation.</p>
+</div>
+<div class="flex justify-center mb-12">
+<div class="mode-toggle" id="modeToggle" onclick="toggleMode()">
+<div class="slider"></div>
+<div class="absolute inset-0 flex items-center justify-between px-6 z-10">
+<span class="text-sm font-semibold text-white" id="farmerLabel">🌾 Farmer/SME</span>
+<span class="text-sm font-semibold text-slate-500" id="industryLabel">🔬 Industry/Lab</span>
+</div>
+</div>
+</div>
+<div id="farmerContent" class="mode-content active">
+<div class="glass rounded-2xl p-8 mb-8">
+<div class="flex items-center gap-3 mb-6">
+<div class="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center"><span class="text-2xl"></span></div>
+<div><h3 class="text-xl font-bold text-green-800">Farmer/SME Mode</h3><p class="text-sm text-slate-500">Simple food selection + shelf life target → Auto-fetches all scientific parameters</p></div>
+</div>
+<div class="grid md:grid-cols-2 gap-6">
+<div class="bg-green-50 rounded-xl p-5 border border-green-100">
+<h4 class="font-bold text-green-700 mb-3">📱 How It Works</h4>
+<ul class="space-y-3">
+<li class="flex items-start gap-3 text-sm"><span class="w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center text-xs flex-shrink-0 mt-0.5">1</span><span>Select your food item from dropdown</span></li>
+<li class="flex items-start gap-3 text-sm"><span class="w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center text-xs flex-shrink-0 mt-0.5">2</span><span>Choose condition: Raw / Fried / Processed</span></li>
+<li class="flex items-start gap-3 text-sm"><span class="w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center text-xs flex-shrink-0 mt-0.5">3</span><span>Set target shelf life in days</span></li>
+<li class="flex items-start gap-3 text-sm"><span class="w-6 h-6 rounded-full bg-green-500 text-white flex items-center justify-center text-xs flex-shrink-0 mt-0.5">4</span><span>AI auto-detects parameters & recommends optimal packaging</span></li>
+</ul>
+</div>
+<div class="bg-white rounded-xl p-5 border border-green-100">
+<h4 class="font-bold text-green-700 mb-3">✨ Benefits</h4>
+<ul class="space-y-2 text-sm text-slate-600">
+<li class="flex items-center gap-2"><span class="text-green-500">✓</span> No scientific knowledge required</li>
+<li class="flex items-center gap-2"><span class="text-green-500">✓</span> Instant recommendations in seconds</li>
+<li class="flex items-center gap-2"><span class="text-green-500">✓</span> Works in 22+ Indian languages</li>
+<li class="flex items-center gap-2"><span class="text-green-500">✓</span> Climate-aware for Indian routes</li>
+<li class="flex items-center gap-2"><span class="text-green-500">✓</span> Cost-effective packaging suggestions</li>
+<li class="flex items-center gap-2"><span class="text-green-500">✓</span> Sustainability scoring included</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div id="industryContent" class="mode-content">
+<div class="glass rounded-2xl p-8 mb-8">
+<div class="flex items-center gap-3 mb-6">
+<div class="w-12 h-12 rounded-xl bg-teal-100 flex items-center justify-center"><span class="text-2xl">🔬</span></div>
+<div><h3 class="text-xl font-bold text-teal-800">Industry/Lab Mode</h3><p class="text-sm text-slate-500">Manual calibration for laboratory-grade precision and ASTM compliance</p></div>
+</div>
+<div class="grid md:grid-cols-2 gap-6">
+<div class="bg-teal-50 rounded-xl p-5 border border-teal-100">
+<h4 class="font-bold text-teal-700 mb-3"> Advanced Controls</h4>
+<ul class="space-y-3">
+<li class="flex items-start gap-3 text-sm"><span class="w-6 h-6 rounded-full bg-teal-500 text-white flex items-center justify-center text-xs flex-shrink-0 mt-0.5">1</span><span>Manual OTR/WVTR entry & calibration with ASTM standards</span></li>
+<li class="flex items-start gap-3 text-sm"><span class="w-6 h-6 rounded-full bg-teal-500 text-white flex items-center justify-center text-xs flex-shrink-0 mt-0.5">2</span><span>Seal strength & gas mixture specification</span></li>
+<li class="flex items-start gap-3 text-sm"><span class="w-6 h-6 rounded-full bg-teal-500 text-white flex items-center justify-center text-xs flex-shrink-0 mt-0.5">3</span><span>ASTM standard compliance validation</span></li>
+<li class="flex items-start gap-3 text-sm"><span class="w-6 h-6 rounded-full bg-teal-500 text-white flex items-center justify-center text-xs flex-shrink-0 mt-0.5">4</span><span>Headspace gas composition control</span></li>
+</ul>
+</div>
+<div class="bg-white rounded-xl p-5 border border-teal-100">
+<h4 class="font-bold text-teal-700 mb-3">📊 Technical Features</h4>
+<ul class="space-y-2 text-sm text-slate-600">
+<li class="flex items-center gap-2"><span class="text-teal-500">✓</span> Precise OTR/WVTR calibration</li>
+<li class="flex items-center gap-2"><span class="text-teal-500">✓</span> Multi-layer structure optimization</li>
+<li class="flex items-center gap-2"><span class="text-teal-500">✓</span> Film gauge tolerance analysis</li>
+<li class="flex items-center gap-2"><span class="text-teal-500">✓</span> Seal strength requirements (N)</li>
+<li class="flex items-center gap-2"><span class="text-teal-500">✓</span> MAP gas ratio optimization</li>
+<li class="flex items-center gap-2"><span class="text-teal-500">✓</span> Export documentation support</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+<div class="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+<div class="glass rounded-2xl p-6 card-hover text-center">
+<div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center mx-auto mb-4"><span class="text-3xl"></span></div>
+<h4 class="font-bold mb-2 text-green-800">AI Visual Pack Audit</h4>
+<p class="text-xs text-slate-600">Upload photo → Instant Protection Score</p>
+</div>
+<div class="glass rounded-2xl p-6 card-hover text-center">
+<div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-100 to-amber-200 flex items-center justify-center mx-auto mb-4"><span class="text-3xl">🗺️</span></div>
+<h4 class="font-bold mb-2 text-amber-800">Climate-Route Engine</h4>
+<p class="text-xs text-slate-600">Maps transit route with weather data</p>
+</div>
+<div class="glass rounded-2xl p-6 card-hover text-center">
+<div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center mx-auto mb-4"><span class="text-3xl">📊</span></div>
+<h4 class="font-bold mb-2 text-blue-800">Multi-Layer Optimization</h4>
+<p class="text-xs text-slate-600">Co-extruded, laminated, or mono-layer</p>
+</div>
+<div class="glass rounded-2xl p-6 card-hover text-center">
+<div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-lime-100 to-lime-200 flex items-center justify-center mx-auto mb-4"><span class="text-3xl">🌱</span></div>
+<h4 class="font-bold mb-2 text-lime-800">Sustainability Score</h4>
+<p class="text-xs text-slate-600">Carbon footprint vs. cost trade-off</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Recommendation Engine Section -->
+<section id="recommend" class="py-24 section-reveal">
+<div class="max-w-7xl mx-auto px-6">
+<div class="text-center mb-12">
+<div class="badge bg-green-100 text-green-700 border border-green-200 mb-4">🎯 Interactive Demo</div>
+<h2 class="text-4xl font-bold mb-4 text-green-900">AI <span class="gradient-text">Recommendation Engine</span></h2>
+<p class="text-slate-600">Select your food commodity and get scientifically optimized packaging specifications</p>
+</div>
+<div class="grid lg:grid-cols-5 gap-8">
+<div class="lg:col-span-2 glass rounded-2xl p-6">
+<h3 class="text-lg font-bold mb-6 flex items-center gap-2 text-green-800"><span class="text-2xl">⚙️</span> Input Parameters</h3>
+<div class="space-y-4">
+<div>
+<label class="text-sm text-slate-600 mb-2 block font-semibold">Food Commodity</label>
+<select id="foodSelect" class="w-full" onchange="updateRecommendation()">
+<optgroup label="🥭 Fresh Fruits">
+<option value="alphonso_mango">Alphonso Mango</option>
+<option value="banana">Banana</option>
+<option value="strawberry">Strawberry</option>
+<option value="grapes">Grapes</option>
+<option value="pomegranate">Pomegranate</option>
+</optgroup>
+<optgroup label="🥔 Vegetables">
+<option value="potato">Potato</option>
+<option value="tomato">Tomato</option>
+<option value="onion">Onion</option>
+<option value="green_chilli">Green Chilli</option>
+</optgroup>
+<optgroup label="🍟 Fried Snacks">
+<option value="potato_chips">Potato Chips</option>
+<option value="namkeen">Namkeen/Mixture</option>
+<option value="bhujia">Bhujia</option>
+</optgroup>
+<optgroup label="🧀 Dairy & Protein">
+<option value="paneer">Paneer</option>
+<option value="chicken">Chicken (Fresh)</option>
+<option value="fish">Fish (Fresh)</option>
+</optgroup>
+<optgroup label="🍞 Bakery & Grains">
+<option value="bread">Bread</option>
+<option value="biscuits">Biscuits</option>
+<option value="rice">Rice/Pulses</option>
+</optgroup>
+</select>
+</div>
+<div>
+<label class="text-sm text-slate-600 mb-2 block font-semibold">Condition</label>
+<div class="grid grid-cols-3 gap-2">
+<button class="condition-btn active px-3 py-2 rounded-lg text-sm text-center bg-green-100 text-green-700 border border-green-300" onclick="setCondition(this, 'raw')">Raw</button>
+<button class="condition-btn px-3 py-2 rounded-lg text-sm text-center bg-white text-slate-500 border border-slate-200" onclick="setCondition(this, 'fried')">Fried</button>
+<button class="condition-btn px-3 py-2 rounded-lg text-sm text-center bg-white text-slate-500 border border-slate-200" onclick="setCondition(this, 'processed')">Processed</button>
+</div>
+</div>
+<div>
+<label class="text-sm text-slate-600 mb-2 block font-semibold"><span>Target Shelf Life:</span> <span id="shelfLifeVal" class="text-green-600 font-bold">7</span> <span>days</span></label>
+<input type="range" id="shelfLife" min="1" max="90" value="7" class="w-full accent-green-500" oninput="updateShelfLife(this.value)">
+</div>
+<div>
+<label class="text-sm text-slate-600 mb-2 block font-semibold">Transit Route</label>
+<div class="grid grid-cols-2 gap-2">
+<select id="originCity" class="w-full" onchange="updateRecommendation()">
+<option value="pune">Pune</option>
+<option value="mumbai">Mumbai</option>
+<option value="delhi">Delhi</option>
+<option value="bangalore">Bangalore</option>
+<option value="hyderabad">Hyderabad</option>
+<option value="kolkata">Kolkata</option>
+</select>
+<select id="destCity" class="w-full" onchange="updateRecommendation()">
+<option value="chennai">Chennai</option>
+<option value="mumbai">Mumbai</option>
+<option value="kolkata">Kolkata</option>
+<option value="delhi">Delhi</option>
+<option value="guwahati">Guwahati</option>
+<option value="kochi">Kochi</option>
+</select>
+</div>
+</div>
+<div>
+<label class="text-sm text-slate-600 mb-2 block font-semibold">Transport Mode</label>
+<select id="transportMode" class="w-full" onchange="updateRecommendation()">
+<option value="reefer">Refrigerated Truck</option>
+<option value="ambient">Ambient Truck</option>
+<option value="rail">Rail (General)</option>
+<option value="air">Air Cargo</option>
+</select>
+</div>
+<button class="btn-primary w-full mt-4" onclick="generateRecommendation()">🧠 Generate AI Recommendation</button>
+</div>
+</div>
+<div class="lg:col-span-3 space-y-6">
+<div class="glass rounded-2xl p-6">
+<div class="flex items-center justify-between mb-6">
+<h3 class="text-lg font-bold flex items-center gap-2 text-green-800"><span class="text-2xl">📦</span> Primary Recommendation</h3>
+<div class="badge bg-green-100 text-green-700 border border-green-200"><span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> AI Optimized</div>
+</div>
+<div id="recContent">
+<div class="grid grid-cols-2 gap-4 mb-6">
+<div class="bg-green-50 rounded-xl p-4 border border-green-100">
+<div class="text-xs text-slate-500 mb-1">Material Configuration</div>
+<div class="text-sm font-bold text-green-700" id="matConfig">Micro-perforated PET tray + anti-fog PLA lidding film</div>
+</div>
+<div class="bg-blue-50 rounded-xl p-4 border border-blue-100">
+<div class="text-xs text-slate-500 mb-1">Film Gauge</div>
+<div class="text-sm font-bold text-blue-700" id="filmGauge">50 micron (200 gauge) ±10%</div>
+</div>
+<div class="bg-purple-50 rounded-xl p-4 border border-purple-100">
+<div class="text-xs text-slate-500 mb-1">Layer Structure</div>
+<div class="text-sm font-bold text-purple-700" id="layerStruct">Co-extruded 3-layer</div>
+</div>
+<div class="bg-amber-50 rounded-xl p-4 border border-amber-100">
+<div class="text-xs text-slate-500 mb-1">Seal Type</div>
+<div class="text-sm font-bold text-amber-700" id="sealType">Heat seal (fin seal) @ 180°C</div>
+</div>
+</div>
+<h4 class="text-sm font-bold text-slate-700 mb-3"> ASTM Standard Barrier Targets</h4>
+<div class="grid grid-cols-3 gap-3 mb-6">
+<div class="bg-green-50 rounded-lg p-3 text-center border border-green-100">
+<div class="text-xs text-slate-500">OTR</div>
+<div class="text-lg font-bold text-green-600 mono" id="otrVal">1,800</div>
+<div class="text-xs text-slate-500">cc/m²/day</div>
+</div>
+<div class="bg-blue-50 rounded-lg p-3 text-center border border-blue-100">
+<div class="text-xs text-slate-500">WVTR</div>
+<div class="text-lg font-bold text-blue-600 mono" id="wvtrVal">15.0</div>
+<div class="text-xs text-slate-500">g/m²/day</div>
+</div>
+<div class="bg-amber-50 rounded-lg p-3 text-center border border-amber-100">
+<div class="text-xs text-slate-500">Light Block</div>
+<div class="text-lg font-bold text-amber-600 mono" id="lightVal">85%</div>
+<div class="text-xs text-slate-500">visible light</div>
+</div>
+</div>
+<h4 class="text-sm font-bold text-slate-700 mb-3">️ Modified Atmosphere (MAP)</h4>
+<div class="flex gap-3 mb-6">
+<div class="flex-1 bg-red-50 rounded-lg p-3 text-center border border-red-100">
+<div class="text-xs text-slate-500">O₂</div>
+<div class="text-lg font-bold text-red-600 mono" id="mapO2">5%</div>
+</div>
+<div class="flex-1 bg-blue-50 rounded-lg p-3 text-center border border-blue-100">
+<div class="text-xs text-slate-500">CO₂</div>
+<div class="text-lg font-bold text-blue-600 mono" id="mapCO2">10%</div>
+</div>
+<div class="flex-1 bg-green-50 rounded-lg p-3 text-center border border-green-100">
+<div class="text-xs text-slate-500">N₂</div>
+<div class="text-lg font-bold text-green-600 mono" id="mapN2">85%</div>
+</div>
+</div>
+<div class="bg-amber-50 border border-amber-200 rounded-xl p-4">
+<div class="flex items-center gap-2 mb-2">
+<span class="text-amber-500">⚡</span>
+<span class="text-sm font-bold text-amber-700">Climate Adjustment Active</span>
+</div>
+<p class="text-xs text-slate-600" id="climateNote">Route crosses humid coastal zone — WVTR upgraded by +40% for monsoon conditions</p>
+</div>
+</div>
+</div>
+<div class="glass rounded-2xl p-6">
+<h3 class="text-lg font-bold mb-4 flex items-center gap-2 text-green-800"><span class="text-2xl">📊</span> Impact Scorecard</h3>
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+<div class="text-center">
+<div class="relative w-20 h-20 mx-auto mb-2">
+<svg class="w-20 h-20" style="transform: rotate(-90deg);" viewBox="0 0 36 36">
+<path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="rgba(34, 197, 94, 0.1)" stroke-width="3"/>
+<path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#22c55e" stroke-width="3" stroke-dasharray="200, 100" stroke-linecap="round"/>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center"><span class="text-sm font-bold text-green-600">+200%</span></div>
+</div>
+<div class="text-xs text-slate-600">Shelf-Life Extension</div>
+</div>
+<div class="text-center">
+<div class="relative w-20 h-20 mx-auto mb-2">
+<svg class="w-20 h-20" style="transform: rotate(-90deg);" viewBox="0 0 36 36">
+<path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="rgba(34, 197, 94, 0.1)" stroke-width="3"/>
+<path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#16a34a" stroke-width="3" stroke-dasharray="72, 100" stroke-linecap="round"/>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center"><span class="text-sm font-bold text-green-700">7.2/10</span></div>
+</div>
+<div class="text-xs text-slate-600">Sustainability Score</div>
+</div>
+<div class="text-center">
+<div class="relative w-20 h-20 mx-auto mb-2">
+<svg class="w-20 h-20" style="transform: rotate(-90deg);" viewBox="0 0 36 36">
+<path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="rgba(34, 197, 94, 0.1)" stroke-width="3"/>
+<path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#84cc16" stroke-width="3" stroke-dasharray="35, 100" stroke-linecap="round"/>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center"><span class="text-sm font-bold text-lime-600">₹2.8</span></div>
+</div>
+<div class="text-xs text-slate-600">Cost/Unit</div>
+</div>
+<div class="text-center">
+<div class="relative w-20 h-20 mx-auto mb-2">
+<svg class="w-20 h-20" style="transform: rotate(-90deg);" viewBox="0 0 36 36">
+<path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="rgba(34, 197, 94, 0.1)" stroke-width="3"/>
+<path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="#15803d" stroke-width="3" stroke-dasharray="85, 100" stroke-linecap="round"/>
+</svg>
+<div class="absolute inset-0 flex items-center justify-center"><span class="text-sm font-bold text-green-800">4.2kg</span></div>
+</div>
+<div class="text-xs text-slate-600">Waste Prevented</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Visual Pack Audit Section -->
+<section id="audit" class="py-24 section-reveal" style="background: linear-gradient(180deg, transparent, rgba(220, 252, 231, 0.5), transparent);">
+<div class="max-w-7xl mx-auto px-6">
+<div class="text-center mb-12">
+<div class="badge bg-purple-100 text-purple-700 border border-purple-200 mb-4">📸 Computer Vision</div>
+<h2 class="text-4xl font-bold mb-4 text-green-900">AI Visual <span class="gradient-text">Pack Audit</span></h2>
+<p class="text-slate-600">Upload a photo of your current packaging — our AI analyzes film properties and gives an instant Protection Score</p>
+</div>
+<div class="grid lg:grid-cols-2 gap-8">
+<div class="glass rounded-2xl p-8">
+<input type="file" id="imageInput" accept="image/*" style="display: none;" onchange="handleImageUpload(event)">
+<div class="upload-zone rounded-xl p-8 text-center cursor-pointer" id="uploadZone" onclick="document.getElementById('imageInput').click()">
+<div id="uploadContent">
+<div class="w-16 h-16 rounded-2xl bg-green-100 flex items-center justify-center mx-auto mb-4"><span class="text-4xl">📷</span></div>
+<h4 class="font-bold mb-2 text-green-800">Drop packaging image here</h4>
+<p class="text-sm text-slate-600 mb-4">or click to browse • PNG, JPG up to 10MB</p>
+</div>
+<div id="scanContent" class="hidden relative">
+<div class="relative rounded-lg overflow-hidden">
+<img id="uploadedImage" class="w-full h-48 object-cover rounded-lg" src="" alt="">
+<div class="scan-overlay"><div class="scan-line"></div></div>
+<div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3">
+<p class="text-sm text-white font-bold">🔍 Analyzing packaging...</p>
+<p class="text-xs text-white/80">AI processing film properties</p>
+</div>
+</div>
+</div>
+<div id="resultContent" class="hidden">
+<div class="relative rounded-lg overflow-hidden">
+<img id="resultImage" class="w-full h-48 object-cover rounded-lg" src="" alt="">
+<div class="absolute inset-0 bg-gradient-to-t from-green-900/80 via-green-800/40 to-transparent rounded-lg"></div>
+<div class="absolute bottom-0 left-0 right-0 p-4 text-white">
+<div class="flex items-center justify-between mb-2">
+<div>
+<div class="text-3xl font-extrabold" id="protectionScore">3/10</div>
+<div class="text-sm font-bold text-red-300" id="riskLevel">High Moisture Risk</div>
+</div>
+<div class="text-right">
+<div class="text-xs text-white/80">Detected Material</div>
+<div class="text-sm font-bold" id="detectedMaterial">Generic LDPE</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="glass rounded-2xl p-8">
+<h3 class="text-lg font-bold mb-6 text-green-800">🔍 Vulnerability Analysis</h3>
+<div class="space-y-4">
+<div>
+<div class="flex justify-between text-sm mb-1"><span class="text-slate-700">Moisture Protection</span><span class="text-red-500 font-bold" id="vulnMoisture">2/10</span></div>
+<div class="progress-bar"><div class="fill bg-gradient-to-r from-red-400 to-red-300" id="vulnMoistureBar" style="width: 20%"></div></div>
+</div>
+<div>
+<div class="flex justify-between text-sm mb-1"><span class="text-slate-700">Oxygen Barrier</span><span class="text-red-500 font-bold" id="vulnOxygen">3/10</span></div>
+<div class="progress-bar"><div class="fill bg-gradient-to-r from-red-400 to-orange-300" id="vulnOxygenBar" style="width: 30%"></div></div>
+</div>
+<div>
+<div class="flex justify-between text-sm mb-1"><span class="text-slate-700">Light Protection</span><span class="text-amber-600 font-bold" id="vulnLight">4/10</span></div>
+<div class="progress-bar"><div class="fill bg-gradient-to-r from-amber-400 to-amber-300" id="vulnLightBar" style="width: 40%"></div></div>
+</div>
+<div>
+<div class="flex justify-between text-sm mb-1"><span class="text-slate-700">Microbial Defense</span><span class="text-red-500 font-bold" id="vulnMicrobial">2/10</span></div>
+<div class="progress-bar"><div class="fill bg-gradient-to-r from-red-400 to-red-300" id="vulnMicrobialBar" style="width: 20%"></div></div>
+</div>
+<div>
+<div class="flex justify-between text-sm mb-1"><span class="text-slate-700">Mechanical Strength</span><span class="text-amber-600 font-bold" id="vulnMechanical">5/10</span></div>
+<div class="progress-bar"><div class="fill bg-gradient-to-r from-amber-400 to-yellow-300" id="vulnMechanicalBar" style="width: 50%"></div></div>
+</div>
+</div>
+<div class="mt-6 p-4 bg-green-50 border border-green-200 rounded-xl">
+<h4 class="text-sm font-bold text-green-700 mb-2">🔧 Upgrade Recommendations</h4>
+<ul class="text-xs text-slate-600 space-y-1" id="upgradeList">
+<li>• Switch to Metallized BOPP (20μm) for 10x OTR improvement</li>
+<li>• Add UV-absorbing layer for light protection</li>
+<li>• Consider MAP with N₂ flush for microbial control</li>
+<li>• Upgrade to multi-layer co-extruded structure</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- DYNAMIC CLIMATE ADAPTATION SECTION (REAL MAP INTEGRATION) -->
+<section id="climate" class="py-24 section-reveal">
+<div class="max-w-7xl mx-auto px-6">
+<div class="text-center mb-12">
+<div class="badge bg-amber-100 text-amber-700 border border-amber-200 mb-4">🗺️ India Climate Mode</div>
+<h2 class="text-4xl font-bold mb-4 text-green-900">Dynamic <span class="gradient-text">Climate Adaptation</span></h2>
+<p class="text-slate-600">Real-time satellite mapping with live telemetry and vehicle simulation</p>
+</div>
+<div class="relative rounded-2xl overflow-hidden shadow-2xl border border-slate-200">
+<!-- Map Container -->
+<div id="map-container"></div>
+<!-- Top Left Telemetry Panel -->
+<div class="map-overlay-panel telemetry-panel">
+<div class="flex items-center justify-between mb-3">
+<div class="font-bold text-sm tracking-wide text-slate-300">Pune → Chennai Satellite Corridor</div>
+<span class="live-badge">LIVE</span>
+</div>
+<div class="space-y-3 text-sm">
+<div class="flex justify-between border-b border-white/10 pb-2">
+<span class="text-slate-400">Distance</span>
+<span class="font-mono font-bold">1,150 km</span>
+</div>
+<div class="flex justify-between border-b border-white/10 pb-2">
+<span class="text-slate-400">ETA</span>
+<span class="font-mono font-bold">~24 hrs</span>
+</div>
+<div class="border-b border-white/10 pb-2">
+<div class="text-slate-400 mb-1">Terrain</div>
+<div class="text-xs text-slate-300">Deccan Semi-Arid → Coromandel Coast</div>
+</div>
+<div class="border-b border-white/10 pb-2">
+<div class="text-slate-400 mb-1">Dew Point Risk</div>
+<div class="text-xs risk-high">HIGH (Monsoon Sweating)</div>
+</div>
+<div class="pt-1">
+<div class="text-slate-400 mb-1">Barrier Multiplier</div>
+<div class="text-lg font-mono font-bold text-green-400">×1.40</div>
+</div>
+</div>
+</div>
+<!-- Bottom Vehicle Control Panel -->
+<div class="map-overlay-panel vehicle-control-panel">
+<div class="flex items-center gap-3 mr-4 border-r border-white/20 pr-4">
+<div class="w-8 h-8 rounded bg-white/10 flex items-center justify-center text-lg">🚛</div>
+<div>
+<div class="text-xs text-slate-400 uppercase tracking-wider font-bold">Vehicle Simulation Control</div>
+<div class="text-[10px] text-slate-500">Reefer Mini Truck (2–4°C Active Cold Chain)</div>
+</div>
+</div>
+<div class="flex gap-2">
+<button class="vehicle-btn active" onclick="changeVehicle(this, 'Mini Truck')">
+<span>🚚</span> Mini Truck
+</button>
+<button class="vehicle-btn" onclick="changeVehicle(this, 'Reefer Van')">
+<span>🚐</span> Reefer Van
+</button>
+<button class="vehicle-btn" onclick="changeVehicle(this, '20-Ton Container')">
+<span>🚛</span> 20-Ton Container
+</button>
+</div>
+<div class="flex gap-2 ml-4 border-l border-white/20 pl-4">
+<button class="control-btn" onclick="toggleSimulation()" id="simBtn">⏸ Pause</button>
+<button class="control-btn">1x Speed</button>
+<button class="control-btn" onclick="resetMap()">↻ Reset View</button>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Materials Comparison Section -->
+<section id="materials" class="py-24 section-reveal" style="background: linear-gradient(180deg, transparent, rgba(220, 252, 231, 0.5), transparent);">
+<div class="max-w-7xl mx-auto px-6">
+<div class="text-center mb-12">
+<div class="badge bg-green-100 text-green-700 border border-green-200 mb-4">🌱 Sustainability Intelligence</div>
+<h2 class="text-4xl font-bold mb-4 text-green-900">Material <span class="gradient-text">Comparison Matrix</span></h2>
+<p class="text-slate-600">Side-by-side analysis of conventional plastics vs. biodegradable alternatives</p>
+</div>
+<div class="flex justify-center gap-2 mb-8 flex-wrap">
+<button class="tab-btn active" onclick="switchMaterialTab(this, 'conventional')">Conventional</button>
+<button class="tab-btn" onclick="switchMaterialTab(this, 'biodegradable')">Biodegradable</button>
+<button class="tab-btn" onclick="switchMaterialTab(this, 'comparison')">Side-by-Side</button>
+</div>
+<div id="conventionalTab" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+<div class="glass rounded-2xl p-6 card-hover">
+<div class="flex items-center justify-between mb-4"><h4 class="font-bold text-blue-700">PET</h4><span class="badge bg-blue-100 text-blue-700 border border-blue-200 text-xs">Rigid</span></div>
+<p class="text-xs text-slate-600 mb-4">Polyethylene Terephthalate — excellent clarity, good gas barrier</p>
+<div class="space-y-2">
+<div class="flex justify-between text-xs"><span class="text-slate-500">OTR</span><span class="mono text-slate-700">6-12 cc/m²/day</span></div>
+<div class="flex justify-between text-xs"><span class="text-slate-500">WVTR</span><span class="mono text-slate-700">5-8 g/m²/day</span></div>
+<div class="flex justify-between text-xs"><span class="text-slate-500">Cost</span><span class="mono text-slate-700">₹1.5-2.5/unit</span></div>
+<div class="flex justify-between text-xs"><span class="text-slate-500">Eco Index</span><span class="mono text-red-500">3/10</span></div>
+</div>
+</div>
+<div class="glass rounded-2xl p-6 card-hover">
+<div class="flex items-center justify-between mb-4"><h4 class="font-bold text-green-700">Metallized BOPP</h4><span class="badge bg-green-100 text-green-700 border border-green-200 text-xs">High Barrier</span></div>
+<p class="text-xs text-slate-600 mb-4">Biaxially Oriented PP with aluminum metallization</p>
+<div class="space-y-2">
+<div class="flex justify-between text-xs"><span class="text-slate-500">OTR</span><span class="mono text-slate-700">0.5-2 cc/m²/day</span></div>
+<div class="flex justify-between text-xs"><span class="text-slate-500">WVTR</span><span class="mono text-slate-700">0.5-1.5 g/m²/day</span></div>
+<div class="flex justify-between text-xs"><span class="text-slate-500">Cost</span><span class="mono text-slate-700">2.0-3.5/unit</span></div>
+<div class="flex justify-between text-xs"><span class="text-slate-500">Eco Index</span><span class="mono text-amber-600">4/10</span></div>
+</div>
+</div>
+<div class="glass rounded-2xl p-6 card-hover">
+<div class="flex items-center justify-between mb-4"><h4 class="font-bold text-purple-700">LDPE</h4><span class="badge bg-purple-100 text-purple-700 border border-purple-200 text-xs">Flexible</span></div>
+<p class="text-xs text-slate-600 mb-4">Low-Density Polyethylene — flexible, stretchable</p>
+<div class="space-y-2">
+<div class="flex justify-between text-xs"><span class="text-slate-500">OTR</span><span class="mono text-slate-700">4000-6000 cc/m²/day</span></div>
+<div class="flex justify-between text-xs"><span class="text-slate-500">WVTR</span><span class="mono text-slate-700">10-15 g/m²/day</span></div>
+<div class="flex justify-between text-xs"><span class="text-slate-500">Cost</span><span class="mono text-slate-700">₹0.8-1.2/unit</span></div>
+<div class="flex justify-between text-xs"><span class="text-slate-500">Eco Index</span><span class="mono text-red-500">2/10</span></div>
+</div>
+</div>
+</div>
+<div id="biodegradableTab" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 hidden">
+<div class="glass rounded-2xl p-6 card-hover border-2 border-green-200">
+<div class="flex items-center justify-between mb-4"><h4 class="font-bold text-green-700">🌱 PLA</h4><span class="badge bg-green-100 text-green-700 border border-green-200 text-xs">Compostable</span></div>
+<p class="text-xs text-slate-600 mb-4">Polylactic Acid — corn-starch based, clear rigid</p>
+<div class="space-y-2">
+<div class="flex justify-between text-xs"><span class="text-slate-500">OTR</span><span class="mono text-slate-700">10-50 cc/m²/day</span></div>
+<div class="flex justify-between text-xs"><span class="text-slate-500">WVTR</span><span class="mono text-slate-700">10-20 g/m²/day</span></div>
+<div class="flex justify-between text-xs"><span class="text-slate-500">Cost</span><span class="mono text-slate-700">₹3.0-5.0/unit</span></div>
+<div class="flex justify-between text-xs"><span class="text-slate-500">Eco Index</span><span class="mono text-green-600 font-bold">8/10</span></div>
+</div>
+</div>
+<div class="glass rounded-2xl p-6 card-hover border-2 border-green-200">
+<div class="flex items-center justify-between mb-4"><h4 class="font-bold text-teal-700"> PHA/PBAT</h4><span class="badge bg-teal-100 text-teal-700 border border-teal-200 text-xs">Marine-Degradable</span></div>
+<p class="text-xs text-slate-600 mb-4">Flexible films — marine-degradable, home-compostable</p>
+<div class="space-y-2">
+<div class="flex justify-between text-xs"><span class="text-slate-500">OTR</span><span class="mono text-slate-700">20-100 cc/m²/day</span></div>
+<div class="flex justify-between text-xs"><span class="text-slate-500">WVTR</span><span class="mono text-slate-700">15-40 g/m²/day</span></div>
+<div class="flex justify-between text-xs"><span class="text-slate-500">Cost</span><span class="mono text-slate-700">₹4.0-7.0/unit</span></div>
+<div class="flex justify-between text-xs"><span class="text-slate-500">Eco Index</span><span class="mono text-green-600 font-bold">9/10</span></div>
+</div>
+</div>
+<div class="glass rounded-2xl p-6 card-hover border-2 border-green-200">
+<div class="flex items-center justify-between mb-4"><h4 class="font-bold text-lime-700">🛡️ Cellulose/Chitosan</h4><span class="badge bg-lime-100 text-lime-700 border border-lime-200 text-xs">Antimicrobial</span></div>
+<p class="text-xs text-slate-600 mb-4">Natural antimicrobial coating — bioactive</p>
+<div class="space-y-2">
+<div class="flex justify-between text-xs"><span class="text-slate-500">OTR</span><span class="mono text-slate-700">15-60 cc/m²/day</span></div>
+<div class="flex justify-between text-xs"><span class="text-slate-500">WVTR</span><span class="mono text-slate-700">8-25 g/m²/day</span></div>
+<div class="flex justify-between text-xs"><span class="text-slate-500">Cost</span><span class="mono text-slate-700">₹3.5-6.0/unit</span></div>
+<div class="flex justify-between text-xs"><span class="text-slate-500">Eco Index</span><span class="mono text-green-600 font-bold">9/10</span></div>
+</div>
+</div>
+</div>
+<div id="comparisonTab" class="hidden">
+<div class="glass rounded-2xl p-6">
+<div class="overflow-x-auto">
+<table class="w-full text-sm">
+<thead><tr class="border-b-2 border-green-200"><th class="text-left py-3 px-4 text-slate-600 font-semibold">Property</th><th class="text-center py-3 px-4 text-blue-600 font-semibold">PET</th><th class="text-center py-3 px-4 text-green-600 font-semibold">PLA</th><th class="text-center py-3 px-4 text-amber-600 font-semibold">Delta</th></tr></thead>
+<tbody>
+<tr class="border-b border-green-100"><td class="py-3 px-4 text-slate-700">OTR</td><td class="py-3 px-4 text-center mono">6-12</td><td class="py-3 px-4 text-center mono">10-50</td><td class="py-3 px-4 text-center text-amber-600">+200-300%</td></tr>
+<tr class="border-b border-green-100"><td class="py-3 px-4 text-slate-700">WVTR</td><td class="py-3 px-4 text-center mono">5-8</td><td class="py-3 px-4 text-center mono">10-20</td><td class="py-3 px-4 text-center text-amber-600">+100-150%</td></tr>
+<tr class="border-b border-green-100"><td class="py-3 px-4 text-slate-700">Cost (₹)</td><td class="py-3 px-4 text-center mono">1.5-2.5</td><td class="py-3 px-4 text-center mono">3.0-5.0</td><td class="py-3 px-4 text-center text-amber-600">+100%</td></tr>
+<tr class="border-b border-green-100"><td class="py-3 px-4 text-slate-700">Carbon</td><td class="py-3 px-4 text-center mono">2.5 kgCO₂e</td><td class="py-3 px-4 text-center mono">0.8 kgCO₂e</td><td class="py-3 px-4 text-center text-green-600 font-bold">-68%</td></tr>
+<tr><td class="py-3 px-4 text-slate-700">Eco Index</td><td class="py-3 px-4 text-center mono text-red-500">3/10</td><td class="py-3 px-4 text-center mono text-green-600">8/10</td><td class="py-3 px-4 text-center text-green-600 font-bold">+167%</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="glass rounded-2xl p-6 mt-6">
+<h4 class="font-bold mb-4 text-green-800">🌍 Carbon Footprint vs. Cost</h4>
+<canvas id="carbonChart" height="200"></canvas>
+</div>
+</div>
+</div>
+</section>
+<!-- Footer -->
+<footer class="py-12 border-t border-green-200" style="background: linear-gradient(180deg, #dcfce7, #f0fdf4);">
+<div class="max-w-7xl mx-auto px-6">
+<div class="flex flex-col md:flex-row items-center justify-between gap-6">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-green-700 flex items-center justify-center shadow-lg">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M12 2C8 2 6 5 6 8c0 2 1 3 2 4-1 1-2 2-2 4 0 3 2 6 6 6s6-3 6-6c0-2-1-3-2-4 1-1 2-2 2-4 0-3-2-6-6-6z"/><path d="M12 2v20"/></svg>
+</div>
+<div><span class="text-lg font-bold text-green-900">Pack<span class="text-green-600">Sense</span> AI</span><p class="text-xs text-slate-600">🌱 Sustainable Food Packaging Intelligence</p></div>
+</div>
+<div class="text-sm text-slate-600">Built with 🌿 for a greener tomorrow</div>
+</div>
+</div>
+</footer>
+<!-- Registration Modal -->
+<div class="modal-overlay" id="registerModal">
+<div class="modal-content">
+<div id="registerFormState">
+<div class="modal-header">
+<button class="modal-close" onclick="closeRegisterModal()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+<div class="flex items-center gap-3 relative z-10">
+<div class="w-14 h-14 rounded-full bg-white/20 backdrop-blur flex items-center justify-center text-3xl">🌱</div>
+<div><h2 class="text-2xl font-bold">Join PackSense AI</h2><p class="text-sm text-green-100 mt-1">Get personalized packaging recommendations</p></div>
+</div>
+</div>
+<div class="modal-body">
+<form id="registerForm" onsubmit="handleRegister(event)">
+<div class="form-group">
+<label class="form-label">I am a...</label>
+<div class="user-type-toggle">
+<div class="user-type-option active" data-type="farmer" onclick="selectUserType(this, 'farmer')"><div class="icon">🌾</div><div class="label">Farmer / SME</div><div class="sublabel">Small-scale producer</div></div>
+<div class="user-type-option" data-type="industry" onclick="selectUserType(this, 'industry')"><div class="icon">🏭</div><div class="label">Industry / Lab</div><div class="sublabel">Large-scale operation</div></div>
+</div>
+</div>
+<div class="form-group"><label class="form-label" for="regName">Full Name</label><input type="text" id="regName" class="form-input" placeholder="Enter your full name" required><div class="form-error" id="nameError">Please enter your name</div></div>
+<div class="form-group"><label class="form-label" for="regEmail">Gmail Address</label><div class="relative"><input type="email" id="regEmail" class="form-input" placeholder="yourname@gmail.com" required><div class="absolute right-3 top-1/2 -translate-y-1/2 text-xl">📧</div></div><div class="form-error" id="emailError">Please enter a valid Gmail address</div></div>
+<div class="form-group">
+<label class="form-label" for="regPassword">Password</label>
+<div class="password-wrapper">
+<input type="password" id="regPassword" class="form-input" placeholder="Create a strong password" required oninput="checkPasswordStrength(this.value)">
+<button type="button" class="password-toggle" onclick="togglePasswordVisibility()"><svg id="eyeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg></button>
+</div>
+<div class="password-strength" id="passwordStrength"><div class="strength-bar" id="str1"></div><div class="strength-bar" id="str2"></div><div class="strength-bar" id="str3"></div><div class="strength-bar" id="str4"></div></div>
+<div class="text-xs text-slate-500 mt-1" id="strengthText">Use 8+ characters with letters, numbers & symbols</div>
+<div class="form-error" id="passwordError">Password must be at least 8 characters</div>
+</div>
+<div class="form-group"><label class="flex items-start gap-2 cursor-pointer"><input type="checkbox" id="regTerms" class="mt-1 accent-green-500" required><span class="text-xs text-slate-600">I agree to the <a href="#" class="text-green-600 font-semibold hover:underline">Terms of Service</a> and <a href="#" class="text-green-600 font-semibold hover:underline">Privacy Policy</a></span></label></div>
+<button type="submit" class="btn-primary w-full !py-3 flex items-center justify-center gap-2"><span>Create Account</span><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg></button>
+<div class="text-center mt-4 text-sm text-slate-600">Already have an account? <a href="#" class="text-green-600 font-semibold hover:underline">Sign in</a></div>
+</form>
+</div>
+</div>
+<div id="registerSuccessState" class="hidden">
+<div class="modal-header">
+<button class="modal-close" onclick="closeRegisterModal()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+<div class="text-center relative z-10 py-4"><div class="text-5xl mb-2">🎉</div><h2 class="text-2xl font-bold">Welcome Aboard!</h2></div>
+</div>
+<div class="modal-body">
+<div class="success-state">
+<div class="success-icon"><svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+<h3 class="text-xl font-bold text-green-800 mb-2">Registration Successful!</h3>
+<p class="text-sm text-slate-600 mb-4">Your account has been created successfully</p>
+<div class="success-email-card">
+<div class="email-header"><span class="text-2xl"></span><div><div class="font-bold text-green-800 text-sm">Confirmation Email Sent</div><div class="text-xs text-slate-600">Check your inbox</div></div></div>
+<div class="text-xs text-slate-600 space-y-2">
+<div class="flex items-center gap-2"><span class="text-green-600">✓</span><span>A confirmation email has been sent to:</span></div>
+<div class="bg-white rounded-lg p-2 font-mono text-green-700 text-center font-semibold" id="confirmEmail">user@gmail.com</div>
+<div class="flex items-center gap-2 mt-2"><span class="text-green-600">✓</span><span>Please click the verification link in the email to activate your account</span></div>
+<div class="flex items-center gap-2"><span class="text-green-600">✓</span><span>Check your spam folder if you don't see it</span></div>
+</div>
+</div>
+<div class="mt-5 p-3 bg-green-50 border border-green-200 rounded-xl"><div class="text-xs text-slate-600"><span class="font-semibold text-green-700">User Type:</span> <span id="confirmUserType" class="font-semibold">Farmer/SME</span></div></div>
+<button class="btn-primary w-full mt-5" onclick="closeRegisterModal()">Start Exploring 🌿</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Chatbot -->
+<button class="chatbot-btn" id="chatbotBtn" onclick="toggleChatbot()"><div class="food-face animate-bounce-food"></div></button>
+<div class="chatbot-window" id="chatbotWindow">
+<div class="chatbot-header">
+<div class="chatbot-avatar">🍅</div>
+<div class="flex-1"><div class="font-bold">PackSense Assistant</div><div class="text-xs text-green-100">Online • Speaks 22+ languages</div></div>
+<button onclick="toggleChatbot()" class="text-white/80 hover:text-white"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+</div>
+<div class="chat-lang-selector" id="chatLangSelector"></div>
+<div class="chatbot-messages" id="chatMessages"></div>
+<div class="quick-replies" id="quickReplies"></div>
+<div class="chatbot-input">
+<input type="text" id="chatInput" placeholder="Ask about packaging..." onkeypress="if(event.key==='Enter') sendChatMessage()">
+<button onclick="sendChatMessage()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+</div>
+</div>
+<script>
+// ==================== LANGUAGE SYSTEM ====================
+const languages = [
+{ code: 'en', name: 'English', native: 'English', flag: '🇬🇧' },
+{ code: 'hi', name: 'Hindi', native: 'हिन्दी', flag: '🇮' },
+{ code: 'bn', name: 'Bengali', native: 'বাংলা', flag: '🇮🇳' },
+{ code: 'te', name: 'Telugu', native: 'తెలుగు', flag: '🇳' },
+{ code: 'mr', name: 'Marathi', native: 'मराठी', flag: '🇮🇳' },
+{ code: 'ta', name: 'Tamil', native: 'தமிழ்', flag: '🇮🇳' },
+{ code: 'gu', name: 'Gujarati', native: 'ગુજરાતી', flag: '🇮🇳' },
+{ code: 'kn', name: 'Kannada', native: 'ಕನ್ನಡ', flag: '🇳' },
+{ code: 'ml', name: 'Malayalam', native: 'മലയാളം', flag: '🇮' },
+{ code: 'or', name: 'Odia', native: 'ଓଡ଼ିଆ', flag: '🇳' },
+{ code: 'pa', name: 'Punjabi', native: 'ਪੰਜਾਬੀ', flag: '🇮🇳' },
+{ code: 'as', name: 'Assamese', native: 'অসমীয়া', flag: '🇮' },
+{ code: 'ur', name: 'Urdu', native: 'اردو', flag: '🇮🇳' },
+{ code: 'sa', name: 'Sanskrit', native: 'संस्कृतम्', flag: '🇮🇳' },
+{ code: 'mai', name: 'Maithili', native: 'मैथिली', flag: '🇮🇳' },
+{ code: 'sd', name: 'Sindhi', native: 'سنڌي', flag: '🇮🇳' },
+{ code: 'kok', name: 'Konkani', native: 'कोंकणी', flag: '🇳' },
+{ code: 'ne', name: 'Nepali', native: 'नेपाली', flag: '🇳' },
+{ code: 'doi', name: 'Dogri', native: 'डोगरी', flag: '🇮🇳' },
+{ code: 'brx', name: 'Bodo', native: 'बड़ो', flag: '🇮🇳' },
+{ code: 'sat', name: 'Santali', native: 'ᱥᱟᱱᱛᱟᱲᱤ', flag: '🇮🇳' },
+{ code: 'mni', name: 'Manipuri', native: 'মৈতৈলোন্', flag: '🇮🇳' },
+{ code: 'ks', name: 'Kashmiri', native: 'कॉशुर', flag: '🇮🇳' }
+];
+const translations = {
+en: { nav_problem: "Problem", nav_solution: "Solution", nav_recommend: "Recommend", nav_audit: "Pack Audit", nav_climate: "Climate Route", nav_materials: "Materials", nav_get_started: "Get Started", nav_register: "Register" },
+hi: { nav_problem: "समस्या", nav_solution: "समाधान", nav_recommend: "सिफारिश", nav_audit: "पैक ऑडिट", nav_climate: "जलवायु मार्ग", nav_materials: "सामग्री", nav_get_started: "शुरू करें", nav_register: "पंजीकरण" }
+};
+['bn', 'te', 'mr', 'ta', 'gu', 'kn', 'ml', 'or', 'pa', 'as', 'ur', 'sa', 'mai', 'sd', 'kok', 'ne', 'doi', 'brx', 'sat', 'mni', 'ks'].forEach(code => { if (!translations[code]) translations[code] = { ...translations.en }; });
+let currentLangCode = 'en';
+function initLanguageDropdown() {
+const dropdown = document.getElementById('langDropdown');
+dropdown.innerHTML = '';
+languages.forEach(lang => {
+const option = document.createElement('div');
+option.className = 'language-option' + (lang.code === currentLangCode ? ' active' : '');
+option.innerHTML = `<div><div class="lang-name">${lang.flag} ${lang.name}</div><div class="lang-native">${lang.native}</div></div>${lang.code === currentLangCode ? '<span style="color: #22c55e;">✓</span>' : ''}`;
+option.onclick = () => setLanguage(lang.code);
+dropdown.appendChild(option);
+});
+}
+function setLanguage(code) {
+currentLangCode = code;
+const lang = languages.find(l => l.code === code);
+document.getElementById('currentLang').textContent = lang.name;
+document.getElementById('currentLangFlag').textContent = lang.flag;
+const t = translations[code] || translations.en;
+document.querySelectorAll('[data-translate]').forEach(el => { const key = el.getAttribute('data-translate'); if (t[key]) el.innerHTML = t[key]; });
+initLanguageDropdown();
+initChatLangSelector();
+updateChatbotWelcome();
+document.getElementById('langDropdown').classList.remove('show');
+}
+// ==================== CHATBOT ====================
+let chatbotOpen = false;
+let chatLang = 'en';
+const chatbotKB = {
+en: { otr: "OTR (Oxygen Transmission Rate) measures how much oxygen passes through packaging per day. Lower OTR = better oxygen barrier.", wvtr: "WVTR (Water Vapor Transmission Rate) measures moisture passing through packaging. Lower WVTR = better moisture barrier.", mango: "For Alphonso Mango: Use micro-perforated PET tray + anti-fog PLA lidding. 50 micron film, OTR ~1800 cc/m²/day, MAP with 5% O₂, 10% CO₂, 85% N₂.", default: "I can help with: OTR/WVTR specs, material recommendations (PET, BOPP, PLA, PHA), MAP gas ratios, climate adjustments, biodegradable alternatives, and food-specific packaging." },
+hi: { otr: "OTR (ऑक्सीजन ट्रांसमिशन रेट) मापता है कि पैकेजिंग से कितना ऑक्सीजन प्रतिदिन गुजरता है।", wvtr: "WVTR (वाटर वेपर ट्रांसमिशन रेट) पैकेजिंग से गुजरने वाली नमी को मापता है।", mango: "अल्फांसो आम के लिए: माइक्रो-परफोरेटेड PET ट्रे + एंटी-फॉग PLA लिडिंग।", default: "मैं मदद कर सकता हूं: OTR/WVTR स्पेक्स, सामग्री सिफारिशें, MAP गैस अनुपात, जलवायु समायोजन।" }
+};
+function toggleChatbot() { chatbotOpen = !chatbotOpen; const win = document.getElementById('chatbotWindow'); if (chatbotOpen) { win.classList.add('open'); if (document.getElementById('chatMessages').children.length === 0) updateChatbotWelcome(); } else { win.classList.remove('open'); } }
+function initChatLangSelector() { const selector = document.getElementById('chatLangSelector'); selector.innerHTML = ''; languages.forEach(lang => { const chip = document.createElement('div'); chip.className = 'chat-lang-chip' + (lang.code === chatLang ? ' active' : ''); chip.textContent = lang.flag + ' ' + lang.native; chip.onclick = () => { chatLang = lang.code; initChatLangSelector(); updateChatbotWelcome(); }; selector.appendChild(chip); }); }
+function updateChatbotWelcome() { const messages = document.getElementById('chatMessages'); messages.innerHTML = ''; const kb = chatbotKB[chatLang] || chatbotKB.en; addBotMessage(kb.default); }
+function addBotMessage(text) { const messages = document.getElementById('chatMessages'); const msg = document.createElement('div'); msg.className = 'chat-message bot'; msg.innerHTML = `<div class="chat-avatar bot"></div><div class="chat-bubble">${text}</div>`; messages.appendChild(msg); messages.scrollTop = messages.scrollHeight; }
+function addUserMessage(text) { const messages = document.getElementById('chatMessages'); const msg = document.createElement('div'); msg.className = 'chat-message user'; msg.innerHTML = `<div class="chat-avatar user">👤</div><div class="chat-bubble">${text}</div>`; messages.appendChild(msg); messages.scrollTop = messages.scrollHeight; }
+function sendChatMessage() { const input = document.getElementById('chatInput'); const text = input.value.trim(); if (!text) return; addUserMessage(text); input.value = ''; setTimeout(() => { const q = text.toLowerCase(); const kb = chatbotKB[chatLang] || chatbotKB.en; let response = kb.default; if (q.includes('otr') || q.includes('oxygen')) response = kb.otr; else if (q.includes('wvtr') || q.includes('moisture')) response = kb.wvtr; else if (q.includes('mango') || q.includes('आम')) response = kb.mango; addBotMessage(response); }, 600); }
+// ==================== COUNTERS & SCROLL ====================
+function animateCounter(elementId, target, suffix = '', duration = 2000) { const el = document.getElementById(elementId); const startTime = performance.now(); function update(currentTime) { const elapsed = currentTime - startTime; const progress = Math.min(elapsed / duration, 1); const eased = 1 - Math.pow(1 - progress, 3); el.textContent = Math.floor(target * eased).toLocaleString() + suffix; if (progress < 1) requestAnimationFrame(update); } requestAnimationFrame(update); }
+const observer = new IntersectionObserver((entries) => { entries.forEach(entry => { if (entry.isIntersecting) entry.target.classList.add('visible'); }); }, { threshold: 0.1 });
+document.querySelectorAll('.section-reveal').forEach(el => observer.observe(el));
+function scrollToSection(id) { document.getElementById(id).scrollIntoView({ behavior: 'smooth' }); }
+// ==================== MODE TOGGLE ====================
+let currentMode = 'farmer';
+function toggleMode() {
+const toggle = document.getElementById('modeToggle');
+const farmerLabel = document.getElementById('farmerLabel');
+const industryLabel = document.getElementById('industryLabel');
+const farmerContent = document.getElementById('farmerContent');
+const industryContent = document.getElementById('industryContent');
+if (currentMode === 'farmer') { currentMode = 'industry'; toggle.classList.add('industry'); farmerLabel.classList.remove('text-white'); farmerLabel.classList.add('text-slate-500'); industryLabel.classList.remove('text-slate-500'); industryLabel.classList.add('text-white'); farmerContent.classList.remove('active'); industryContent.classList.add('active'); }
+else { currentMode = 'farmer'; toggle.classList.remove('industry'); farmerLabel.classList.remove('text-slate-500'); farmerLabel.classList.add('text-white'); industryLabel.classList.remove('text-white'); industryLabel.classList.add('text-slate-500'); industryContent.classList.remove('active'); farmerContent.classList.add('active'); }
+}
+function setCondition(btn, condition) { document.querySelectorAll('.condition-btn').forEach(b => { b.classList.remove('bg-green-100', 'text-green-700', 'border-green-300', 'active'); b.classList.add('bg-white', 'text-slate-500', 'border-slate-200'); }); btn.classList.remove('bg-white', 'text-slate-500', 'border-slate-200'); btn.classList.add('bg-green-100', 'text-green-700', 'border-green-300', 'active'); }
+function updateShelfLife(val) { document.getElementById('shelfLifeVal').textContent = val; }
+// ==================== FOOD DATABASE & RECOMMENDATION ====================
+const foodDB = {
+alphonso_mango: { mat: 'Micro-perforated PET tray + anti-fog PLA lidding', gauge: '50 micron (200 gauge) ±10%', layer: 'Co-extruded 3-layer', seal: 'Heat seal (fin seal) @ 180°C', otr: '1,800', wvtr: '15.0', light: '40%', o2: '5', co2: '10', n2: '85', climate: 'Route crosses humid coastal zone — WVTR upgraded by +40% for monsoon conditions' },
+banana: { mat: 'Micro-perforated LDPE bags + ethylene absorber', gauge: '25 micron (100 gauge) ±10%', layer: 'Mono-layer with perforations', seal: 'Heat seal (lap seal) @ 150°C', otr: '4,500', wvtr: '20.0', light: '30%', o2: '8', co2: '5', n2: '87', climate: 'Ethylene-sensitive — perforations critical. WVTR +25% for ambient transport' },
+strawberry: { mat: 'Anti-fog PET clamshell + absorbent pad', gauge: '30 micron (120 gauge) ±10%', layer: 'Co-extruded 2-layer anti-fog', seal: 'Ultrasonic seal @ 40kHz', otr: '2,200', wvtr: '18.0', light: '25%', o2: '10', co2: '15', n2: '75', climate: 'High respiration fruit — MAP critical. Condensation risk HIGH' },
+grapes: { mat: 'SO₂-generating liner + perforated PET bag', gauge: '35 micron (140 gauge) ±10%', layer: 'Laminated 2-layer', seal: 'Heat seal with SO₂ pad pocket', otr: '1,500', wvtr: '12.0', light: '50%', o2: '12', co2: '5', n2: '83', climate: 'SO₂ emission for Botrytis control. Humid route needs moisture barrier upgrade' },
+pomegranate: { mat: 'Wax-coated + perforated HDPE bag', gauge: '40 micron (160 gauge) ±10%', layer: 'Mono-layer HDPE', seal: 'Heat seal (fin seal) @ 170°C', otr: '3,000', wvtr: '8.0', light: '35%', o2: '8', co2: '5', n2: '87', climate: 'Moderate respiration — wax coating reduces moisture loss. +20% WVTR for coastal' },
+potato: { mat: 'Jute/HDPE mesh bag + sprout inhibitor', gauge: '60 micron (240 gauge)', layer: 'Woven mesh structure', seal: 'Stitched closure', otr: '8,000', wvtr: '50.0', light: '90%', o2: '18', co2: '1', n2: '81', climate: 'Darkness critical (light → solanine). High ventilation needed' },
+tomato: { mat: 'Rigid PET tray + perforated LDPE wrap', gauge: '35 micron (140 gauge) ±10%', layer: 'Co-extruded 2-layer', seal: 'Heat seal (lap seal) @ 160°C', otr: '3,500', wvtr: '22.0', light: '30%', o2: '5', co2: '3', n2: '92', climate: 'Climacteric fruit — ethylene management critical. Anti-fog + moisture barrier' },
+onion: { mat: 'Mesh net bag (HDPE monofilament)', gauge: 'N/A (mesh structure)', layer: 'Single-layer mesh', seal: 'Clip/tie closure', otr: '10,000+', wvtr: '60.0', light: '50%', o2: '20', co2: '0.5', n2: '79', climate: 'Maximum ventilation needed. Avoid coastal routes in monsoon' },
+green_chilli: { mat: 'Micro-perforated LDPE pouch + absorbent', gauge: '30 micron (120 gauge) ±10%', layer: 'Mono-layer perforated', seal: 'Heat seal @ 150°C', otr: '3,000', wvtr: '25.0', light: '40%', o2: '8', co2: '5', n2: '87', climate: 'High respiration + moisture sensitive. Refrigeration mandatory. +35% WVTR' },
+potato_chips: { mat: 'Metallized BOPP/PE laminate pouch', gauge: '45 micron (180 gauge) ±5%', layer: 'Laminated 3-layer', seal: 'Heat seal (fin seal) @ 190°C, 40N strength', otr: '0.8', wvtr: '1.0', light: '99%', o2: '1', co2: '0', n2: '99', climate: 'Ultra-low OTR critical (lipid oxidation). N₂ flush mandatory. Metallization blocks UV' },
+namkeen: { mat: 'Metallized BOPP/CPP laminate', gauge: '50 micron (200 gauge) ±5%', layer: 'Laminated 2-layer', seal: 'Heat seal @ 185°C, 35N strength', otr: '1.2', wvtr: '1.5', light: '98%', o2: '1.5', co2: '0', n2: '98.5', climate: 'Critical a_w < 0.3 for crispness. Monsoon routes need +30% WVTR spec' },
+bhujia: { mat: 'Metallized BOPP flow-wrap', gauge: '40 micron (160 gauge) ±5%', layer: 'Laminated 2-layer', seal: 'Center fin seal @ 180°C', otr: '1.0', wvtr: '1.2', light: '97%', o2: '1', co2: '0', n2: '99', climate: 'Thin strands = high surface area → rapid moisture uptake. Near-total barrier' },
+paneer: { mat: 'PA/PE vacuum pouch (retortable)', gauge: '75 micron (300 gauge) ±5%', layer: 'Co-extruded 5-layer (PA/EVOH/PA/PE/PE)', seal: 'Vacuum seal @ 200°C, 50N strength', otr: '0.5', wvtr: '2.0', light: '95%', o2: '0.3', co2: '0', n2: '99.7', climate: 'Perishable — cold chain MANDATORY. Vacuum essential for 7+ day shelf life' },
+chicken: { mat: 'High-barrier MAP tray (PET/EVOH/PE)', gauge: '250 micron tray + 60μm lidding', layer: 'Co-extruded 7-layer tray', seal: 'Heat seal lidding @ 175°C', otr: '0.3', wvtr: '3.0', light: '90%', o2: '0.5', co2: '30', n2: '69.5', climate: 'High CO₂ MAP for microbial suppression. Strict cold chain (0-4°C)' },
+fish: { mat: 'EPS tray + MAP film (PA/PE)', gauge: '80 micron film + 20mm EPS tray', layer: 'Laminated 3-layer film', seal: 'Tray-seal lidding @ 180°C', otr: '0.2', wvtr: '2.5', light: '95%', o2: '0.5', co2: '40', n2: '59.5', climate: 'TMA odor control. High CO₂ MAP. Ice + cold chain mandatory' },
+bread: { mat: 'Printed LDPE pillow pouch', gauge: '40 micron (160 gauge)', layer: 'Mono-layer LDPE + ink', seal: 'Fin seal with clip/tie', otr: '4,000', wvtr: '12.0', light: '60%', o2: '15', co2: '2', n2: '83', climate: 'Staling is main issue. Short shelf life (3-5 days). Avoid high temp routes' },
+biscuits: { mat: 'Metallized BOPP flow-wrap', gauge: '35 micron (140 gauge) ±5%', layer: 'Laminated 2-layer', seal: 'Longitudinal fin seal @ 170°C', otr: '1.5', wvtr: '1.8', light: '95%', o2: '1', co2: '0', n2: '99', climate: 'Moisture = enemy (sogginess). Mechanical protection needed. N₂ flush for fat stability' },
+rice: { mat: 'HDPE woven bag + LDPE liner', gauge: '90 micron bag + 50μm liner', layer: 'Woven + film liner', seal: 'Stitched + heat sealed liner', otr: '2,000', wvtr: '5.0', light: '70%', o2: '5', co2: '2', n2: '93', climate: 'Insect infestation risk in humid storage. Hermetic sealing preferred' }
+};
+function updateRecommendation() { generateRecommendation(); }
+function generateRecommendation() {
+const food = document.getElementById('foodSelect').value;
+const data = foodDB[food];
+if (!data) return;
+const output = document.getElementById('recContent');
+output.style.opacity = '0'; output.style.transform = 'translateY(10px)';
+setTimeout(() => {
+document.getElementById('matConfig').textContent = data.mat;
+document.getElementById('filmGauge').textContent = data.gauge;
+document.getElementById('layerStruct').textContent = data.layer;
+document.getElementById('sealType').textContent = data.seal;
+document.getElementById('otrVal').textContent = data.otr;
+document.getElementById('wvtrVal').textContent = data.wvtr;
+document.getElementById('lightVal').textContent = data.light;
+document.getElementById('mapO2').textContent = data.o2 + '%';
+document.getElementById('mapCO2').textContent = data.co2 + '%';
+document.getElementById('mapN2').textContent = data.n2 + '%';
+document.getElementById('climateNote').textContent = data.climate;
+output.style.opacity = '1'; output.style.transform = 'translateY(0)';
+}, 300);
+}
+// ==================== IMAGE UPLOAD & ANALYSIS ====================
+function handleImageUpload(event) { const file = event.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = function(e) { analyzeImage(e.target.result); }; reader.readAsDataURL(file); }
+function analyzeImage(imageData) {
+const uploadContent = document.getElementById('uploadContent');
+const scanContent = document.getElementById('scanContent');
+const resultContent = document.getElementById('resultContent');
+const uploadedImage = document.getElementById('uploadedImage');
+const resultImage = document.getElementById('resultImage');
+uploadContent.classList.add('hidden');
+scanContent.classList.remove('hidden');
+uploadedImage.src = imageData;
+const img = new Image();
+img.onload = function() {
+const canvas = document.createElement('canvas');
+const ctx = canvas.getContext('2d');
+canvas.width = img.width; canvas.height = img.height;
+ctx.drawImage(img, 0, 0);
+const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+const data = imgData.data;
+let totalBrightness = 0, metallicPixels = 0, darkPixels = 0;
+let pixelCount = data.length / 4;
+for (let i = 0; i < data.length; i += 4) {
+const r = data[i], g = data[i + 1], b = data[i + 2];
+const brightness = (r + g + b) / 3;
+totalBrightness += brightness;
+if (brightness < 80) darkPixels++;
+const maxChannel = Math.max(r, g, b);
+const minChannel = Math.min(r, g, b);
+if (maxChannel - minChannel < 30 && brightness > 150) metallicPixels++;
+}
+const avgBrightness = totalBrightness / pixelCount;
+const metallicRatio = metallicPixels / pixelCount;
+const darkRatio = darkPixels / pixelCount;
+setTimeout(() => {
+scanContent.classList.add('hidden');
+resultContent.classList.remove('hidden');
+resultImage.src = imageData;
+let scores;
+if (metallicRatio > 0.3) { scores = { moisture: 8, oxygen: 9, light: 9, microbial: 7, mechanical: 7, material: 'Metallized Film', riskLevel: 'Low Risk - Good Barrier' }; }
+else if (avgBrightness > 180) { scores = { moisture: 4, oxygen: 5, light: 3, microbial: 4, mechanical: 6, material: 'Clear Plastic (LDPE/PET)', riskLevel: 'Medium Risk - Light Exposure' }; }
+else if (darkRatio > 0.5) { scores = { moisture: 6, oxygen: 6, light: 8, microbial: 6, mechanical: 7, material: 'Opaque Film', riskLevel: 'Medium Risk - Moderate Protection' }; }
+else { scores = { moisture: 5, oxygen: 5, light: 5, microbial: 5, mechanical: 6, material: 'Standard Plastic Film', riskLevel: 'Medium Risk - Basic Protection' }; }
+scores.overall = Math.round((scores.moisture + scores.oxygen + scores.light + scores.microbial + scores.mechanical) / 5);
+document.getElementById('protectionScore').textContent = scores.overall + '/10';
+document.getElementById('riskLevel').textContent = scores.riskLevel;
+document.getElementById('detectedMaterial').textContent = scores.material;
+['Moisture', 'Oxygen', 'Light', 'Microbial', 'Mechanical'].forEach(key => {
+const k = key.toLowerCase();
+document.getElementById('vuln' + key).textContent = scores[k] + '/10';
+document.getElementById('vuln' + key + 'Bar').style.width = (scores[k] * 10) + '%';
+});
+const upgradeList = document.getElementById('upgradeList');
+let recs = [];
+if (scores.moisture < 6) recs.push('• Switch to Metallized BOPP (20μm) for better moisture barrier');
+if (scores.oxygen < 6) recs.push('• Add EVOH layer for improved oxygen barrier');
+if (scores.light < 6) recs.push('• Add UV-absorbing layer or use opaque packaging');
+if (scores.microbial < 6) recs.push('• Consider MAP with N₂ flush for microbial control');
+if (scores.mechanical < 6) recs.push('• Upgrade to multi-layer co-extruded structure');
+if (recs.length === 0) { recs.push('• Current packaging provides adequate protection'); recs.push('• Consider biodegradable alternatives for sustainability'); }
+upgradeList.innerHTML = recs.map(r => `<li>${r}</li>`).join('');
+}, 2500);
+};
+img.src = imageData;
+}
+// ==================== REAL MAP INTEGRATION (LEAFLET + OPENSTREETMAP) ====================
+let map;
+let routeLine;
+let vehicleMarker;
+let isSimulating = true;
+let animationFrame;
+let progress = 0;
+// City coordinates
+const cities = {
+pune: [18.5204, 73.8567],
+mumbai: [19.0760, 72.8777],
+delhi: [28.6139, 77.2090],
+bangalore: [12.9716, 77.5946],
+hyderabad: [17.3850, 78.4867],
+kolkata: [22.5726, 88.3639],
+chennai: [13.0827, 80.2707],
+guwahati: [26.1445, 91.7362],
+kochi: [9.9312, 76.2673]
+};
+function initMap() {
+// Initialize Leaflet map centered on India
+map = L.map('map-container', {
+zoomControl: false,
+attributionControl: false
+}).setView([20.5937, 78.9629], 5);
+// Add Esri World Imagery (Satellite view matching reference)
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+maxZoom: 18,
+attribution: 'Tiles © Esri'
+}).addTo(map);
+// Add city markers
+Object.entries(cities).forEach(([name, coords]) => {
+const marker = L.marker(coords, {
+icon: L.divIcon({
+className: 'custom-city-marker',
+html: `<div style="background: #22c55e; color: white; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; box-shadow: 0 2px 8px rgba(0,0,0,0.3); white-space: nowrap; border: 2px solid white;">${name.charAt(0).toUpperCase() + name.slice(1)}</div>`,
+iconSize: [100, 30],
+iconAnchor: [50, 15]
+})
+}).addTo(map);
+});
+// Draw route from Pune to Chennai
+drawRoute(cities.pune, cities.chennai);
+// Create vehicle marker
+createVehicleMarker(cities.pune);
+// Start simulation
+startSimulation();
+}
+function drawRoute(start, end) {
+if (routeLine) map.removeLayer(routeLine);
+// Create curved path (approximating highway route)
+const midLat = (start[0] + end[0]) / 2 - 1; // Curve southward
+const midLng = (start[1] + end[1]) / 2;
+const latlngs = [
+start,
+[midLat, midLng],
+end
+];
+routeLine = L.polyline(latlngs, {
+color: '#22c55e',
+weight: 4,
+opacity: 0.8,
+dashArray: '10, 10',
+smoothFactor: 1
+}).addTo(map);
+}
+function createVehicleMarker(position) {
+if (vehicleMarker) map.removeLayer(vehicleMarker);
+vehicleMarker = L.marker(position, {
+icon: L.divIcon({
+className: 'vehicle-marker',
+html: `<div style="font-size: 24px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); transform: rotate(45deg);">🚛</div>`,
+iconSize: [30, 30],
+iconAnchor: [15, 15]
+}),
+zIndexOffset: 1000
+}).addTo(map);
+}
+function startSimulation() { isSimulating = true; document.getElementById('simBtn').innerHTML = '⏸ Pause'; animateVehicle(); }
+function pauseSimulation() { isSimulating = false; document.getElementById('simBtn').innerHTML = '▶ Play'; cancelAnimationFrame(animationFrame); }
+function toggleSimulation() { if (isSimulating) pauseSimulation(); else startSimulation(); }
+function animateVehicle() {
+if (!isSimulating) return;
+progress += 0.002;
+if (progress > 1) progress = 0;
+// Interpolate along the route
+const start = cities.pune;
+const end = cities.chennai;
+const midLat = (start[0] + end[0]) / 2 - 1;
+const midLng = (start[1] + end[1]) / 2;
+// Quadratic Bezier interpolation
+const t = progress;
+const lat = (1-t)*(1-t)*start[0] + 2*(1-t)*t*midLat + t*t*end[0];
+const lng = (1-t)*(1-t)*start[1] + 2*(1-t)*t*midLng + t*t*end[1];
+if (vehicleMarker) {
+vehicleMarker.setLatLng([lat, lng]);
+}
+animationFrame = requestAnimationFrame(animateVehicle);
+}
+function changeVehicle(btn, type) {
+document.querySelectorAll('.vehicle-btn').forEach(b => b.classList.remove('active'));
+btn.classList.add('active');
+// Update vehicle icon
+const icons = { 'Mini Truck': '🚚', 'Reefer Van': '🚐', '20-Ton Container': '🚛' };
+if (vehicleMarker) {
+vehicleMarker.setIcon(L.divIcon({
+className: 'vehicle-marker',
+html: `<div style="font-size: 24px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); transform: rotate(45deg);">${icons[type]}</div>`,
+iconSize: [30, 30],
+iconAnchor: [15, 15]
+}));
+}
+}
+function resetMap() { map.setView([20.5937, 78.9629], 5); progress = 0; if (vehicleMarker) vehicleMarker.setLatLng(cities.pune); }
+// ==================== MATERIAL TABS ====================
+function switchMaterialTab(btn, tab) {
+document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+btn.classList.add('active');
+document.getElementById('conventionalTab').classList.add('hidden');
+document.getElementById('biodegradableTab').classList.add('hidden');
+document.getElementById('comparisonTab').classList.add('hidden');
+document.getElementById(tab + 'Tab').classList.remove('hidden');
+if (tab === 'comparison') initCarbonChart();
+}
+let carbonChartInstance = null;
+function initCarbonChart() {
+if (carbonChartInstance) return;
+const ctx = document.getElementById('carbonChart').getContext('2d');
+carbonChartInstance = new Chart(ctx, {
+type: 'bubble',
+data: {
+datasets: [
+{ label: 'Conventional Plastics', data: [{ x: 2.0, y: 2.5, r: 12 }, { x: 2.8, y: 3.0, r: 10 }, { x: 1.0, y: 1.5, r: 15 }, { x: 3.2, y: 4.0, r: 8 }], backgroundColor: 'rgba(239, 68, 68, 0.4)', borderColor: 'rgba(239, 68, 68, 0.8)' },
+{ label: 'Biodegradable', data: [{ x: 4.0, y: 0.8, r: 10 }, { x: 5.5, y: 0.5, r: 8 }, { x: 4.5, y: 0.6, r: 9 }], backgroundColor: 'rgba(34, 197, 94, 0.4)', borderColor: 'rgba(34, 197, 94, 0.8)' }
+]
+},
+options: {
+responsive: true,
+plugins: { legend: { labels: { color: '#1e293b', font: { size: 11 } } }, tooltip: { callbacks: { label: function(ctx) { return `Cost: ₹${ctx.raw.x}/unit | CO₂: ${ctx.raw.y} kgCO₂e`; } } } },
+scales: { x: { title: { display: true, text: 'Cost per Unit (₹)', color: '#1e293b' }, ticks: { color: '#64748b' }, grid: { color: 'rgba(34, 197, 94, 0.05)' } }, y: { title: { display: true, text: 'Carbon Footprint (kgCO₂e)', color: '#1e293b' }, ticks: { color: '#64748b' }, grid: { color: 'rgba(34, 197, 94, 0.05)' } } }
+}
+});
+}
+// ==================== REGISTRATION MODAL ====================
+let selectedUserType = 'farmer';
+function openRegisterModal() { document.getElementById('registerModal').classList.add('open'); document.getElementById('registerFormState').classList.remove('hidden'); document.getElementById('registerSuccessState').classList.add('hidden'); document.body.style.overflow = 'hidden'; }
+function closeRegisterModal() { document.getElementById('registerModal').classList.remove('open'); document.body.style.overflow = ''; setTimeout(() => { document.getElementById('registerForm').reset(); document.querySelectorAll('.form-error').forEach(e => e.classList.remove('show')); document.querySelectorAll('.form-input').forEach(e => e.classList.remove('error')); document.querySelectorAll('.strength-bar').forEach(e => e.className = 'strength-bar'); document.getElementById('strengthText').textContent = 'Use 8+ characters with letters, numbers & symbols'; document.querySelectorAll('.user-type-option').forEach(opt => opt.classList.remove('active')); document.querySelector('.user-type-option[data-type="farmer"]').classList.add('active'); selectedUserType = 'farmer'; }, 300); }
+function selectUserType(element, type) { document.querySelectorAll('.user-type-option').forEach(opt => opt.classList.remove('active')); element.classList.add('active'); selectedUserType = type; }
+function togglePasswordVisibility() { const pwd = document.getElementById('regPassword'); const eyeIcon = document.getElementById('eyeIcon'); if (pwd.type === 'password') { pwd.type = 'text'; eyeIcon.innerHTML = '<path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/>'; } else { pwd.type = 'password'; eyeIcon.innerHTML = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>'; } }
+function checkPasswordStrength(password) {
+const bars = [document.getElementById('str1'), document.getElementById('str2'), document.getElementById('str3'), document.getElementById('str4')];
+const strengthText = document.getElementById('strengthText');
+bars.forEach(b => b.className = 'strength-bar');
+let strength = 0;
+if (password.length >= 8) strength++;
+if (/[A-Z]/.test(password)) strength++;
+if (/[0-9]/.test(password)) strength++;
+if (/[^A-Za-z0-9]/.test(password)) strength++;
+const levels = ['', 'Weak', 'Fair', 'Good', 'Strong'];
+const classes = ['', 'weak', 'weak', 'medium', 'strong'];
+const colors = ['', '#ef4444', '#ef4444', '#f59e0b', '#22c55e'];
+for (let i = 0; i < strength; i++) bars[i].classList.add(classes[strength]);
+if (password.length === 0) {
+strengthText.textContent = 'Use 8+ characters with letters, numbers & symbols';
+strengthText.style.color = '#64748b';
+} else {
+strengthText.textContent = 'Password strength: ' + levels[strength];
+strengthText.style.color = colors[strength];
+}
+}
+function handleRegister(event) {
+event.preventDefault();
+const name = document.getElementById('regName').value.trim();
+const email = document.getElementById('regEmail').value.trim();
+const password = document.getElementById('regPassword').value;
+const terms = document.getElementById('regTerms').checked;
+document.querySelectorAll('.form-error').forEach(e => e.classList.remove('show'));
+document.querySelectorAll('.form-input').forEach(e => e.classList.remove('error'));
+let hasError = false;
+if (name.length < 2) { document.getElementById('nameError').classList.add('show'); document.getElementById('regName').classList.add('error'); hasError = true; }
+const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+if (!emailRegex.test(email)) { document.getElementById('emailError').classList.add('show'); document.getElementById('regEmail').classList.add('error'); hasError = true; }
+if (password.length < 8) { document.getElementById('passwordError').classList.add('show'); document.getElementById('regPassword').classList.add('error'); hasError = true; }
+if (hasError) return;
+document.getElementById('registerFormState').classList.add('hidden');
+document.getElementById('registerSuccessState').classList.remove('hidden');
+document.getElementById('confirmEmail').textContent = email;
+document.getElementById('confirmUserType').textContent = selectedUserType === 'farmer' ? ' Farmer / SME' : '🏭 Industry / Lab';
+triggerConfetti();
+}
+function triggerConfetti() {
+const modal = document.querySelector('.modal-content');
+const colors = ['#22c55e', '#84cc16', '#f59e0b', '#3b82f6', '#a855f7', '#ef4444'];
+for (let i = 0; i < 40; i++) {
+const confetti = document.createElement('div');
+confetti.className = 'confetti';
+confetti.style.left = Math.random() * 100 + '%';
+confetti.style.top = '-10px';
+confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+confetti.style.animationDelay = Math.random() * 0.5 + 's';
+confetti.style.animationDuration = (2 + Math.random() * 2) + 's';
+modal.appendChild(confetti);
+setTimeout(() => confetti.remove(), 4000);
+}
+}
+document.getElementById('registerModal').addEventListener('click', (e) => { if (e.target.id === 'registerModal') closeRegisterModal(); });
+// ==================== NAV & UI ====================
+const sections = document.querySelectorAll('section[id]');
+window.addEventListener('scroll', () => {
+const scrollY = window.scrollY + 100;
+sections.forEach(section => {
+const top = section.offsetTop;
+const height = section.offsetHeight;
+const id = section.getAttribute('id');
+const link = document.querySelector(`a[href="#${id}"]`);
+if (link) {
+if (scrollY >= top && scrollY < top + height) link.classList.add('active');
+else link.classList.remove('active');
+}
+});
+});
+document.getElementById('langBtn').addEventListener('click', (e) => { e.stopPropagation(); document.getElementById('langDropdown').classList.toggle('show'); });
+document.addEventListener('click', (e) => { if (!e.target.closest('.language-selector')) document.getElementById('langDropdown').classList.remove('show'); });
+const uploadZone = document.getElementById('uploadZone');
+uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+uploadZone.addEventListener('drop', (e) => {
+e.preventDefault();
+uploadZone.classList.remove('dragover');
+const file = e.dataTransfer.files[0];
+if (file && file.type.startsWith('image/')) {
+const reader = new FileReader();
+reader.onload = function(event) { analyzeImage(event.target.result); };
+reader.readAsDataURL(file);
+}
+});
+// ==================== INIT ====================
+window.addEventListener('load', () => {
+initLanguageDropdown();
+initChatLangSelector();
+setTimeout(() => {
+animateCounter('counter1', 150, '+');
+animateCounter('counter2', 25, '+');
+animateCounter('counter3', 85, '%');
+}, 500);
+generateRecommendation();
+// Initialize Real Map
+setTimeout(() => {
+initMap();
+}, 1000);
+});
+document.addEventListener('keydown', (e) => {
+if (e.key === 'Escape') { closeRegisterModal(); if (chatbotOpen) toggleChatbot(); }
+});
+</script>
+</body>
+</html>
